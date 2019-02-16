@@ -99,6 +99,6 @@ void Player::doSomething()
 //
 
 Wall::Wall(double startX, double startY, StudentWorld* world)
-	:Actor(IID_PLAYER, startX, startY, world)
+	:Actor(IID_WALL, startX, startY, world)
 {
 }

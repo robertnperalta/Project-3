@@ -52,12 +52,12 @@ int StudentWorld::init()
 				case Level::dumb_zombie:
 					break;
 				case Level::player:
-					m_player = new Player(x, y, this);
+					m_player = new Player(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
 					break;
 				case Level::exit:
 					break;
 				case Level::wall:
-					newActor = new Wall(x, y, this);
+					newActor = new Wall(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
 					break;
 				case Level::pit:
 					break;
