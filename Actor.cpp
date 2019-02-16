@@ -23,7 +23,7 @@ bool Actor::move(int dir)
 {
 	setDirection(dir);	// Change the direction the Actor is facing
 
-	int destX, destY;
+	double destX, destY;
 	switch (dir)		// Determine destination
 	{
 	case left:
@@ -55,7 +55,7 @@ bool Actor::move(int dir)
 
 //
 //	Player
-//
+// 
 
 Player::Player(double startX, double startY, StudentWorld * world)
 	:Actor(IID_PLAYER, startX, startY, world), m_alive(true), m_infected(false),
@@ -89,7 +89,16 @@ void Player::doSomething()
 		case KEY_PRESS_DOWN:	move(down);		break;
 		case KEY_PRESS_SPACE:				// TODO: IMPLEMENT OTHER FUNCTIONS
 		case KEY_PRESS_TAB:
-		case KEY_PRESS_ENTER:
+		case KEY_PRESS_ENTER:	break;
 		}
 	}
+}
+
+//
+//	Wall
+//
+
+Wall::Wall(double startX, double startY, StudentWorld* world)
+	:Actor(IID_PLAYER, startX, startY, world)
+{
 }

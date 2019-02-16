@@ -25,7 +25,7 @@ public:
 
 private:
 	std::list<Actor*> m_actors;
-	Actor* m_player;
+	Player* m_player;
 };
 
 #endif // STUDENTWORLD_H_

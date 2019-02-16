@@ -40,41 +40,34 @@ int StudentWorld::init()
 		{
 			for (int y = 0; y < LEVEL_HEIGHT; y++)
 			{
-				Level::MazeEntry ge = lev.getContentsOf(x, y);	// TODO: ALLOCATE NEW ACTORS
-				switch (ge)
+				Level::MazeEntry ge = lev.getContentsOf(x, y);
+
+				Actor* newActor;
+				switch (ge)	// TODO: ALLOCATE OTHER ACTORS
 				{
 				case Level::empty:
-					cout << "Location 80,160 is empty" << endl;
 					break;
 				case Level::smart_zombie:
-					cout << "Location 80,160 starts with a smart zombie" << endl;
 					break;
 				case Level::dumb_zombie:
-					cout << "Location 80,160 starts with a dumb zombie" << endl;
 					break;
 				case Level::player:
-					cout << "Location 80,160 is where Penelope starts" << endl;
+					m_player = new Player(x, y, this);
 					break;
 				case Level::exit:
-					cout << "Location 80,160 is where an exit is" << endl;
 					break;
 				case Level::wall:
-					cout << "Location 80,160 holds a Wall" << endl;
+					newActor = new Wall(x, y, this);
 					break;
 				case Level::pit:
-					cout << "Location 80,160 has a pit in the ground" << endl;
 					break;
 				case Level::citizen:
-					cout << "Location 80,160 has a pit in the ground" << endl;
 					break;
 				case Level::vaccine_goodie:
-					cout << "Location 80,160 has a pit in the ground" << endl;
 					break;
 				case Level::gas_can_goodie:
-					cout << "Location 80,160 has a pit in the ground" << endl;
 					break;
 				case Level::landmine_goodie:
-					cout << "Location 80,160 has a pit in the ground" << endl;
 					break;
 				}
 			}
@@ -84,16 +77,32 @@ int StudentWorld::init()
 	return GWSTATUS_LEVEL_ERROR;
 }
 
-int StudentWorld::move()
+int StudentWorld::move()	// TODO: COMPLETE
 {
-    // This code is here merely to allow the game to build, run, and terminate after you hit enter.
-    // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
-    decLives();
-    return GWSTATUS_PLAYER_DIED;
+	m_player->doSomething();		// Player takes its turn
+	if (!(m_player->isAlive()))
+		return GWSTATUS_PLAYER_DIED;
+
+	list<Actor*>::iterator it = m_actors.begin();
+	while (it != m_actors.end())
+	{
+		(*it)->doSomething();			// Every Actor takes a turn
+
+		if (!(m_player->isAlive()))		// Check if Player died during that turn
+			return GWSTATUS_PLAYER_DIED;
+
+		it++;
+	}
+	return GWSTATUS_CONTINUE_GAME;
 }
 
 void StudentWorld::cleanUp()
 {
+	delete m_player;
+
+	list<Actor*>::iterator it = m_actors.begin();
+	while (it != m_actors.end())
+		delete *it;
 }
 
 bool StudentWorld::overlap(double x, double y)

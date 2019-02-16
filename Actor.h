@@ -2,8 +2,11 @@
 #define ACTOR_H_
 
 #include "GraphObject.h"
+#include "StudentWorld.h"
 
-class StudentWorld;
+//
+//	Actor
+//
 
 class Actor : public GraphObject
 {
@@ -23,6 +26,9 @@ private:
 	StudentWorld* m_world;
 };
 
+//
+//	Player
+//
 
 class Player : public Actor
 {
@@ -49,6 +55,20 @@ private:
 	int m_nVacs;
 	int m_nFlames;
 	int m_nMines;
+};
+
+//
+//	Wall
+//
+
+class Wall : public Actor
+{
+public:
+	Wall(double startX, double startY, StudentWorld* world);
+	virtual ~Wall() {}
+
+	virtual void doSomething() {}
+	virtual bool impassable() { return true; }
 };
 
 #endif // ACTOR_H_
