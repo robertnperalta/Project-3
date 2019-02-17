@@ -12,18 +12,21 @@ class Actor : public GraphObject
 {
 public:
 	Actor(int imageID, double startX, double startY,
-		StudentWorld* world, int dir = 0, int depth = 0);
+		StudentWorld* world, int moveDist = 0, int dir = 0, int depth = 0);
 	virtual ~Actor() {}
 
 	virtual void doSomething() = 0;
 	virtual bool impassable() const { return false; }
 
 	StudentWorld* getWorld() const { return m_world; }
-	bool inBoundary(double x, double y) const;
+	bool inBoundary(double x, double y, const Actor* moving) const;
+
+protected:
 	bool move(int dir);
 
 private:
 	StudentWorld* m_world;
+	int m_moveDist;
 };
 
 //
@@ -37,7 +40,7 @@ public:
 	virtual ~Player() {}
 
 	virtual void doSomething();
-	virtual bool impassable() { return true; }
+	virtual bool impassable() const { return true; }
 
 	bool isAlive() const { return m_alive; }
 	int infectedCount() const { return m_infectedCount; }
@@ -68,7 +71,7 @@ public:
 	virtual ~Wall() {}
 
 	virtual void doSomething() {}
-	virtual bool impassable() { return true; }
+	virtual bool impassable() const { return true; }
 };
 
 #endif // ACTOR_H_

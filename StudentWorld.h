@@ -21,7 +21,7 @@ public:
     virtual void cleanUp();
 
 	bool overlap(double x, double y);
-	bool blocked(double x, double y);
+	bool blocked(double x, double y, const Actor* moving);
 
 private:
 	std::list<Actor*> m_actors;

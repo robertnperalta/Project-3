@@ -58,6 +58,7 @@ int StudentWorld::init()
 					break;
 				case Level::wall:
 					newActor = new Wall(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::pit:
 					break;
@@ -110,13 +111,13 @@ bool StudentWorld::overlap(double x, double y)
 	return false;
 }
 
-bool StudentWorld::blocked(double x, double y)
+bool StudentWorld::blocked(double x, double y, const Actor * moving)
 {
 	list<Actor*>::iterator it = m_actors.begin();
 	while (it != m_actors.end())	// Check every Actor in the game right now
 	{
 		if ((*it)->impassable())			// The Actor is impassable
-			if ((*it)->inBoundary(x, y))	// The point is in the Actor's boundary box
+			if ((*it)->inBoundary(x, y, moving))	// The point is in the Actor's boundary box
 				return true;				// The point is blocked
 		it++;
 	}
