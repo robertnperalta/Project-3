@@ -100,10 +100,13 @@ int StudentWorld::move()	// TODO: COMPLETE
 void StudentWorld::cleanUp()
 {
 	delete m_player;
+	m_player = nullptr;		// Prevents undefined behavior in repeated calls of cleanUp()
 
 	list<Actor*>::iterator it = m_actors.begin();
 	while (it != m_actors.end())
 		delete *it;
+
+	m_actors.clear();		// Prevents undefined behavior in repeated calls of cleanUp()
 }
 
 bool StudentWorld::overlap(double x, double y)
