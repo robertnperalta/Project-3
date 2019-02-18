@@ -15,10 +15,14 @@ bool Actor::inBoundary(double x, double y, const Actor * moving) const
 	if (moving == this)	// This is the Actor trying to move
 		return false;	// An Actor can't block itself
 
-	if ((getX() <= x && getX() + SPRITE_WIDTH - 1 >= x &&	// The boundary box including the point is within the Actor's boundary
-		getY() <= y && getY() + SPRITE_HEIGHT - 1 >= y) ||
+	if ((getX() <= x && getX() + SPRITE_WIDTH - 1 >= x &&	// Any of the corners of the boundary box including the point is within the Actor's boundary
+		getY() <= y && getY() + SPRITE_HEIGHT - 1 >= y) ||											// Bottom left corner
 		(getX() <= x + SPRITE_WIDTH - 1 && getX() + SPRITE_WIDTH - 1 >= x + SPRITE_WIDTH - 1 &&
-		getY() <= y + SPRITE_WIDTH - 1 && getY() + SPRITE_WIDTH - 1 >= y + SPRITE_WIDTH - 1))
+		getY() <= y + SPRITE_WIDTH - 1 && getY() + SPRITE_WIDTH - 1 >= y + SPRITE_WIDTH - 1) ||		// Top right corner
+		(getX() <= x + SPRITE_WIDTH - 1 && getX() + SPRITE_WIDTH - 1 >= x + SPRITE_WIDTH - 1 &&
+		getY() <= y && getY() + SPRITE_WIDTH - 1 >= y) ||											// Bottom right corner
+		(getX() <= x && getX() + SPRITE_WIDTH - 1 >= x &&
+		getY() <= y + SPRITE_WIDTH - 1 && getY() + SPRITE_WIDTH - 1 >= y + SPRITE_WIDTH - 1))		// Top left corner
 		return true;
 	else
 		return false;
