@@ -27,6 +27,7 @@ public:
 
 	void overlap(double x, double y, std::list<Actor*>& trues, const Actor* compare);
 	void blocked(double x, double y, std::list<Actor*>& trues, const Actor* moving);
+	void addActor(Actor* a) { m_actors.push_back(a); }
 
 private:
 	std::list<Actor*> m_actors;

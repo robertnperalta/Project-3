@@ -45,7 +45,7 @@ public:
 	virtual bool dieFromFire() const { return false; }
 	virtual bool dieFromPit() const { return false; }
 	virtual bool infectable() const { return false; }
-	virtual bool canExit() const { return false; }
+	virtual bool eatsBrains() const { return false; }
 
 private:
 	StudentWorld* m_world;
@@ -62,6 +62,16 @@ public:
 	Agent(int imageID, double x, double y, StudentWorld* world, int moveDist);
 	virtual ~Agent() {}
 
+	// Accessors
+
+	int moveDist() { return m_moveDist; }
+	bool paralyzed() { return m_paralyzed; }
+
+	// Mutators
+
+	void skipNextTurn() { m_paralyzed = true; }
+	void takeNextTurn() { m_paralyzed = false; }
+
 	// Characteristics
 
 	virtual bool impassable() const { return true; }
@@ -69,10 +79,12 @@ public:
 	virtual bool dieFromPit() const { return true; }
 
 protected:
+	void findDest(int dir, int distX, int distY, double& dest_x, double& dest_y);
 	bool tryMove(int dir);
 
 private:
 	int m_moveDist;
+	bool m_paralyzed;
 };
 
 //
@@ -99,11 +111,27 @@ public:
 	// Characteristics
 
 	virtual bool infectable() const { return true; }
-	virtual bool canExit() const { return true; }
 
 private:
 	bool m_infected;
 	int m_infectedCount;
+};
+
+class Zombie : public Agent
+{
+public:
+	Zombie(double x, double y, StudentWorld* world);
+	virtual ~Zombie() {}
+
+	virtual void doSomething();
+
+	// Characteristics
+
+	virtual bool eatsBrains() { return true; }
+
+private:
+	int m_plan;
+	virtual int pickDirection() = 0;
 };
 
 //////////////////////////////

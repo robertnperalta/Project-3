@@ -50,8 +50,31 @@ bool Actor::overlapping(double x, double y, const Actor * compare) const
 
 
 Agent::Agent(int imageID, double x, double y, StudentWorld * world, int moveDist)
-	:Actor(imageID, x, y, world), m_moveDist(moveDist)
+	:Actor(imageID, x, y, world), m_moveDist(moveDist), m_paralyzed(false)
 {
+}
+
+void Agent::findDest(int dir, int distX, int distY, double & destX, double & destY)
+{
+	switch (dir)
+	{
+	case left:
+		destX = getX() - distX;
+		destY = getY();
+		break;
+	case right:
+		destX = getX() + distX;
+		destY = getY();
+		break;
+	case up:
+		destX = getX();
+		destY = getY() + distY;
+		break;
+	case down:
+		destX = getX();
+		destY = getY() - distY;
+		break;
+	}
 }
 
 bool Agent::tryMove(int dir)
@@ -59,25 +82,7 @@ bool Agent::tryMove(int dir)
 	setDirection(dir);	// Change the direction the Actor is facing
 
 	double destX, destY;
-	switch (dir)		// Determine destination
-	{
-	case left:
-		destX = getX() - m_moveDist;
-		destY = getY();
-		break;
-	case right:
-		destX = getX() + m_moveDist;
-		destY = getY();
-		break;
-	case up:
-		destX = getX();
-		destY = getY() + m_moveDist;
-		break;
-	case down:
-		destX = getX();
-		destY = getY() - m_moveDist;
-		break;
-	}
+	findDest(dir, m_moveDist, m_moveDist, destX, destY);	// Determine the Actor's destination
 
 	list<Actor*> blocking;
 	getWorld()->blocked(destX, destY, blocking, this);
@@ -97,6 +102,67 @@ bool Agent::tryMove(int dir)
 Human::Human(int imageID, double x, double y, StudentWorld * world, int moveDist)
 	:Agent(imageID, x, y, world, moveDist), m_infected(false), m_infectedCount(0)
 {
+}
+
+//
+//	Zombie
+//
+
+Zombie::Zombie(double x, double y, StudentWorld * world)
+	:Agent(IID_ZOMBIE, x, y, world, 1)
+{
+}
+
+void Zombie::doSomething()
+{
+	if (!alive())		// The Zombie is dead
+		return;
+
+	if (paralyzed())	// The Zombie is paralyzed this turn
+	{
+		takeNextTurn();
+		return;
+	}
+
+	// Attempt to vomit
+
+	double vomitX, vomitY;
+	findDest(getDirection(), SPRITE_WIDTH, SPRITE_HEIGHT, vomitX, vomitY);	// Find where the vomit would be
+	list<Actor*> overlapsVomit;
+	getWorld()->overlap(vomitX, vomitY, overlapsVomit, this);
+
+	bool foundTarget = false;
+	list<Actor*>::iterator it = overlapsVomit.begin();
+	while (it != overlapsVomit.end())	// See if any Actors would overlap with the vomit
+	{
+		if ((*it)->infectable())
+		{
+			foundTarget = true;
+			break;
+		}
+	}
+
+	if (foundTarget && randInt(1, 3) == 1)	// There is a target and it passes the 1 in 3 chance
+	{
+		// TODO: ALLOCATE VOMIT, ADD TO STUDENTWORLD
+		return;
+	}
+
+	// Attempt movement
+
+	if (m_plan == 0)	// The Zombie doesn't have a plan
+	{
+		m_plan = randInt(3, 10);	// Pick a new plan
+		setDirection(pickDirection());
+	}
+
+	double destX, destY;
+	findDest(getDirection(), moveDist(), moveDist(), destX, destY);
+	if (!tryMove(getDirection()))	// The motion is blocked
+		m_plan = 0;					// Pick a new plan next turn
+	else
+		m_plan--;
+	return;
 }
 
 
@@ -169,7 +235,7 @@ void Exit::doSomething()
 	list<Actor*>::iterator it = overlaps.begin();
 	while (it != overlaps.end())
 	{
-		if ((*it)->canExit())		// A Citizen is overlapping the Exit
+		if ((*it)->infectable())		// A Citizen is overlapping the Exit
 		{
 			(*it)->setToRemove();	// Remove the Citizen
 			getWorld()->decCitizens();
