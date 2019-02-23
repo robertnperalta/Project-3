@@ -28,6 +28,7 @@ public:
 	virtual bool dieFromFire() const { return false; }
 	virtual bool dieFromPit() const { return false; }
 	virtual bool infectable() const { return false; }
+	virtual bool canExit() const { return false; }
 
 	// Accessors
 
@@ -84,10 +85,18 @@ public:
 	virtual bool dieFromFire() const { return true; }
 	virtual bool dieFromPit() const { return true; }
 	virtual bool infectable() const { return true; }
+	virtual bool canExit() const { return false; }
+
+	// Accessors
 
 	int nVacs() const { return m_nVacs; }
 	int nFlames() const { return m_nFlames; }
 	int nMines() const { return m_nMines; }
+	bool finished() const { return m_finished; }
+
+	// Mutators
+
+	void finishLevel() { m_finished = true; }
 
 	virtual void kill() { setToRemove(); getWorld()->playSound(SOUND_PLAYER_DIE); }
 
@@ -95,6 +104,7 @@ private:
 	int m_nVacs;
 	int m_nFlames;
 	int m_nMines;
+	bool m_finished;
 };
 
 //
@@ -118,7 +128,10 @@ public:
 class Exit : public Actor
 {
 public:
-	Exit()
+	Exit(double startX, double startY, StudentWorld* world);
+	virtual ~Exit() {}
+
+	virtual void doSomething();
 };
 
 #endif // ACTOR_H_

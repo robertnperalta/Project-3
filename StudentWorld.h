@@ -20,12 +20,18 @@ public:
     virtual int move();
     virtual void cleanUp();
 
-	bool overlap(double x, double y, const Actor* compare);
-	bool blocked(double x, double y, const Actor* moving);
+	int nCitizens() const { return m_nCitizens; }
+	void decCitizens() { m_nCitizens--; }
+
+	Player* player() const { return m_player; }
+
+	void overlap(double x, double y, std::list<Actor*>& trues, const Actor* compare);
+	void blocked(double x, double y, std::list<Actor*>& trues, const Actor* moving);
 
 private:
 	std::list<Actor*> m_actors;
 	Player* m_player;
+	int m_nCitizens;
 };
 
 #endif // STUDENTWORLD_H_

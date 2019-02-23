@@ -1,5 +1,7 @@
 #include "Actor.h"
 #include "StudentWorld.h"
+#include <list>
+using namespace std;
 
 //////////////////////////////
 //		BASE CLASSES		//
@@ -68,7 +70,9 @@ bool Actor::move(int dir)
 		break;
 	}
 
-	if (getWorld()->blocked(destX, destY, this))	// The destination is blocked
+	list<Actor*> blocking;
+	getWorld()->blocked(destX, destY, blocking, this);
+	if (blocking.size() != 0)	// The destination is blocked
 		return false;
 	else
 	{
@@ -86,7 +90,7 @@ bool Actor::move(int dir)
 // 
 
 Player::Player(double startX, double startY, StudentWorld * world)
-	:Actor(IID_PLAYER, startX, startY, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0)
+	:Actor(IID_PLAYER, startX, startY, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0), m_finished(false)
 {
 }
 
@@ -128,4 +132,33 @@ void Player::doSomething()
 Wall::Wall(double startX, double startY, StudentWorld* world)
 	:Actor(IID_WALL, startX, startY, world)
 {
+}
+
+//
+//	Exit
+//
+
+Exit::Exit(double startX, double startY, StudentWorld * world)
+	:Actor(IID_EXIT, startX, startY, world, 0, right, 1)
+{
+}
+
+void Exit::doSomething()
+{
+	list<Actor*> overlaps;
+	getWorld()->overlap(getX(), getY(), overlaps, this);
+	list<Actor*>::iterator it = overlaps.begin();
+	while (it != overlaps.end())
+	{
+		if ((*it)->canExit())		// A Citizen is overlapping the Exit
+		{
+			(*it)->setToRemove();	// Remove the Citizen
+			getWorld()->decCitizens();
+		}
+		it++;
+	}
+
+	if (getWorld()->nCitizens() == 0)	// No Citizens left on the level
+		if (getWorld()->player()->overlapping(getX(), getY(), this))	// The Player is on the Exit
+			getWorld()->player()->finishLevel();	// Finish the level
 }

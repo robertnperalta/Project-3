@@ -63,6 +63,7 @@ int StudentWorld::init()
 				case Level::pit:
 					break;
 				case Level::citizen:
+					m_nCitizens++;
 					break;
 				case Level::vaccine_goodie:
 					break;
@@ -89,8 +90,11 @@ int StudentWorld::move()	// TODO: COMPLETE
 	{
 		(*it)->doSomething();			// Every Actor takes a turn
 
-		if (!(m_player->alive()))		// Check if Player died during that turn
+		if (!(m_player->alive()))		// Player died during that turn
 			return GWSTATUS_PLAYER_DIED;
+
+		if (m_player->finished())		// Player finished level during that turn
+			return GWSTATUS_FINISHED_LEVEL;
 
 		it++;
 	}
@@ -109,27 +113,27 @@ void StudentWorld::cleanUp()
 	m_actors.clear();		// Prevents undefined behavior in repeated calls of cleanUp()
 }
 
-bool StudentWorld::overlap(double x, double y, const Actor * compare)
+void StudentWorld::overlap(double x, double y, list<Actor*> & trues, const Actor * compare)
 {
 	list<Actor*>::iterator it = m_actors.begin();
 	while (it != m_actors.end())	// Check every Actor in the game right now
 	{
 		if ((*it)->overlapping(x, y, compare))	// The point is close enough to the Actor to overlap sprites
-			return true;						// The point is causing overlap
+			trues.push_back(*it);		// Add the Actor to a list of objects overlapping
 		it++;
 	}
-	return false;
+	return;
 }
 
-bool StudentWorld::blocked(double x, double y, const Actor * moving)
+void StudentWorld::blocked(double x, double y, list<Actor*> & trues, const Actor * moving)
 {
 	list<Actor*>::iterator it = m_actors.begin();
 	while (it != m_actors.end())	// Check every Actor in the game right now
 	{
 		if ((*it)->impassable())			// The Actor is impassable
 			if ((*it)->inBoundary(x, y, moving))	// The point is in the Actor's boundary box
-				return true;				// The point is blocked
+				trues.push_back(*it);	// Add the Actor to a list of objects blocking
 		it++;
 	}
-	return false;
+	return;
 }
