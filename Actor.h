@@ -15,11 +15,28 @@
 class Actor : public GraphObject
 {
 public:
-	Actor(int imageID, double startX, double startY, StudentWorld* world, 
-		int moveDist = 0, int dir = 0, int depth = 0);
+	Actor(int imageID, double startX, double startY, StudentWorld* world, int dir = right, int depth = 0);
 	virtual ~Actor() {}
 
 	virtual void doSomething() = 0;
+
+	// Accessors
+
+	StudentWorld* getWorld() const { return m_world; }
+	bool alive() const { return m_alive; }
+
+	// Mutators
+
+	void setToRemove() { m_alive = false; }				// Sets for game to remove
+	void kill() { setToRemove(); dyingAction(); }		// Does other actions (points, sounds, etc.)
+	virtual void dyingAction() = 0;
+
+	virtual void infect() {}
+
+	// Check contact
+
+	bool inBoundary(double x, double y, const Actor* moving) const;
+	bool overlapping(double x, double y, const Actor* compare) const;
 
 	// Characteristics
 
@@ -30,36 +47,61 @@ public:
 	virtual bool infectable() const { return false; }
 	virtual bool canExit() const { return false; }
 
+private:
+	StudentWorld* m_world;
+	bool m_alive;
+};
+
+//
+//	Agent
+//
+
+class Agent : public Actor
+{
+public:
+	Agent(int imageID, double x, double y, StudentWorld* world, int moveDist);
+	virtual ~Agent() {}
+
+	// Characteristics
+
+	virtual bool impassable() const { return true; }
+	virtual bool dieFromFire() const { return true; }
+	virtual bool dieFromPit() const { return true; }
+
+protected:
+	bool tryMove(int dir);
+
+private:
+	int m_moveDist;
+};
+
+//
+//	Human
+//
+
+class Human : public Agent
+{
+public:
+	Human(int imageID, double x, double y, StudentWorld* world, int moveDist);
+	virtual ~Human() {}
+
 	// Accessors
 
-	StudentWorld* getWorld() const { return m_world; }
-	int moveDist() const { return m_moveDist; }
-	bool alive() const { return m_alive; }
-	bool infected() const { return m_infected; }
-	int infectedCount() const { return m_infectedCount; }
+	bool infected() { return m_infected; }
+	int infectedCount() { return m_infectedCount; }
 
 	// Mutators
 
-	void setToRemove() { m_alive = false; }				// Sets for game to remove
-	void kill() { setToRemove(); dyingAction(); }		// Does other actions (points, sounds, etc.)
-	virtual void dyingAction() = 0;
-
-	void infect() { m_infected = true; }
-	void incInfect() { m_infected++; }
+	virtual void infect() { m_infected = true; }
+	void incInfect() { m_infectedCount++; }
 	void vaccinate() { m_infected = false; m_infectedCount = 0; }
 
-	// Check contact
+	// Characteristics
 
-	bool inBoundary(double x, double y, const Actor* moving) const;
-	bool overlapping(double x, double y, const Actor* compare) const;
-
-protected:
-	bool move(int dir);
+	virtual bool infectable() const { return true; }
+	virtual bool canExit() const { return true; }
 
 private:
-	StudentWorld* m_world;
-	int m_moveDist;
-	bool m_alive;
 	bool m_infected;
 	int m_infectedCount;
 };
@@ -72,21 +114,13 @@ private:
 //	Player
 //
 
-class Player : public Actor
+class Player : public Human
 {
 public:
 	Player(double startX, double startY, StudentWorld* world);
 	virtual ~Player() {}
 
 	virtual void doSomething();
-
-	// Characteristics
-
-	virtual bool impassable() const { return true; }
-	virtual bool dieFromFire() const { return true; }
-	virtual bool dieFromPit() const { return true; }
-	virtual bool infectable() const { return true; }
-	virtual bool canExit() const { return false; }
 
 	// Accessors
 
@@ -98,7 +132,6 @@ public:
 	// Mutators
 
 	void finishLevel() { m_finished = true; }
-
 	virtual void dyingAction() { getWorld()->playSound(SOUND_PLAYER_DIE); }
 
 private:
@@ -135,6 +168,7 @@ public:
 	virtual ~Exit() {}
 
 	virtual void doSomething();
+	virtual void dyingAction() {}
 };
 
 #endif // ACTOR_H_

@@ -11,9 +11,8 @@ using namespace std;
 //	Actor
 //
 
-Actor::Actor(int imageID, double startX, double startY, StudentWorld * world, int moveDist, int dir, int depth)
-	:GraphObject(imageID, startX, startY, dir, depth), m_world(world), 
-	m_moveDist(moveDist), m_alive(true), m_infected(false), m_infectedCount(0)
+Actor::Actor(int imageID, double startX, double startY, StudentWorld * world, int dir, int depth)
+	:GraphObject(imageID, startX, startY, dir, depth), m_world(world), m_alive(true)
 {
 }
 
@@ -45,7 +44,17 @@ bool Actor::overlapping(double x, double y, const Actor * compare) const
 	return false;
 }
 
-bool Actor::move(int dir)
+//
+//	Agent
+//
+
+
+Agent::Agent(int imageID, double x, double y, StudentWorld * world, int moveDist)
+	:Actor(imageID, x, y, world), m_moveDist(moveDist)
+{
+}
+
+bool Agent::tryMove(int dir)
 {
 	setDirection(dir);	// Change the direction the Actor is facing
 
@@ -81,6 +90,16 @@ bool Actor::move(int dir)
 	}
 }
 
+//
+//	Human
+//
+
+Human::Human(int imageID, double x, double y, StudentWorld * world, int moveDist)
+	:Agent(imageID, x, y, world, moveDist), m_infected(false), m_infectedCount(0)
+{
+}
+
+
 //////////////////////////////
 //		GAME OBJECTS		//
 //////////////////////////////
@@ -90,7 +109,7 @@ bool Actor::move(int dir)
 // 
 
 Player::Player(double startX, double startY, StudentWorld * world)
-	:Actor(IID_PLAYER, startX, startY, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0), m_finished(false)
+	:Human(IID_PLAYER, startX, startY, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0), m_finished(false)
 {
 }
 
@@ -114,10 +133,10 @@ void Player::doSomething()
 	{
 		switch (ch)
 		{
-		case KEY_PRESS_LEFT:	move(left);		break;
-		case KEY_PRESS_RIGHT:	move(right);	break;
-		case KEY_PRESS_UP:		move(up);		break;
-		case KEY_PRESS_DOWN:	move(down);		break;
+		case KEY_PRESS_LEFT:	tryMove(left);		break;
+		case KEY_PRESS_RIGHT:	tryMove(right);		break;
+		case KEY_PRESS_UP:		tryMove(up);		break;
+		case KEY_PRESS_DOWN:	tryMove(down);		break;
 		case KEY_PRESS_SPACE:				// TODO: IMPLEMENT OTHER FUNCTIONS
 		case KEY_PRESS_TAB:
 		case KEY_PRESS_ENTER:	break;
@@ -139,7 +158,7 @@ Wall::Wall(double startX, double startY, StudentWorld* world)
 //
 
 Exit::Exit(double startX, double startY, StudentWorld * world)
-	:Actor(IID_EXIT, startX, startY, world, 0, right, 1)
+	:Actor(IID_EXIT, startX, startY, world, right, 1)
 {
 }
 
