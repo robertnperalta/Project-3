@@ -154,6 +154,8 @@ void Exit::doSomething()
 		{
 			(*it)->setToRemove();	// Remove the Citizen
 			getWorld()->decCitizens();
+			getWorld()->increaseScore(500);
+			getWorld()->playSound(SOUND_CITIZEN_SAVED);
 		}
 		it++;
 	}

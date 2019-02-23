@@ -13,7 +13,7 @@ GameWorld* createStudentWorld(string assetPath)
 // Students:  Add code to this file, StudentWorld.h, Actor.h and Actor.cpp
 
 StudentWorld::StudentWorld(string assetPath)
-: GameWorld(assetPath), m_player(nullptr)
+: GameWorld(assetPath), m_player(nullptr), m_nCitizens(0)
 {
 }
 
@@ -55,6 +55,8 @@ int StudentWorld::init()
 					m_player = new Player(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
 					break;
 				case Level::exit:
+					newActor = new Exit(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::wall:
 					newActor = new Wall(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);

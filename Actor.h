@@ -40,8 +40,9 @@ public:
 
 	// Mutators
 
-	void setToRemove() { m_alive = false; }		// Sets for game to remove
-	virtual void kill() { setToRemove(); }		// Does other actions (points, sounds, etc.)
+	void setToRemove() { m_alive = false; }				// Sets for game to remove
+	void kill() { setToRemove(); dyingAction(); }		// Does other actions (points, sounds, etc.)
+	virtual void dyingAction() = 0;
 
 	void infect() { m_infected = true; }
 	void incInfect() { m_infected++; }
@@ -98,7 +99,7 @@ public:
 
 	void finishLevel() { m_finished = true; }
 
-	virtual void kill() { setToRemove(); getWorld()->playSound(SOUND_PLAYER_DIE); }
+	virtual void dyingAction() { getWorld()->playSound(SOUND_PLAYER_DIE); }
 
 private:
 	int m_nVacs;
@@ -118,7 +119,9 @@ public:
 	virtual ~Wall() {}
 
 	virtual void doSomething() {}
+
 	virtual bool impassable() const { return true; }
+	virtual void dyingAction() {}
 };
 
 //
