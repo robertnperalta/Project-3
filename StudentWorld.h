@@ -20,7 +20,7 @@ public:
     virtual int move();
     virtual void cleanUp();
 
-	bool overlap(double x, double y);
+	bool overlap(double x, double y, const Actor* compare);
 	bool blocked(double x, double y, const Actor* moving);
 
 private:

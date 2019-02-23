@@ -1,12 +1,17 @@
 #include "Actor.h"
 #include "StudentWorld.h"
 
+//////////////////////////////
+//		BASE CLASSES		//
+//////////////////////////////
+
 //
 //	Actor
 //
 
 Actor::Actor(int imageID, double startX, double startY, StudentWorld * world, int moveDist, int dir, int depth)
-	:GraphObject(imageID, startX, startY, dir, depth), m_world(world), m_moveDist(moveDist)
+	:GraphObject(imageID, startX, startY, dir, depth), m_world(world), 
+	m_moveDist(moveDist), m_alive(true), m_infected(false), m_infectedCount(0)
 {
 }
 
@@ -26,6 +31,16 @@ bool Actor::inBoundary(double x, double y, const Actor * moving) const
 		return true;
 	else
 		return false;
+}
+
+bool Actor::overlapping(double x, double y, const Actor * compare) const
+{
+	if (compare == this)	// This is the Actor that the function is comparing against
+		return false;		// An Actor can't overlap with itself
+
+	if ((getX() - x) * (getX() - x) + (getY() - y) * (getY() - y) <= 100)	// The point and the anchor pixel of this Actor are within 10 pixels of each other
+		return true;
+	return false;
 }
 
 bool Actor::move(int dir)
@@ -62,25 +77,28 @@ bool Actor::move(int dir)
 	}
 }
 
+//////////////////////////////
+//		GAME OBJECTS		//
+//////////////////////////////
+
 //
 //	Player
 // 
 
 Player::Player(double startX, double startY, StudentWorld * world)
-	:Actor(IID_PLAYER, startX, startY, world, 4), m_alive(true), m_infected(false),
-	m_infectedCount(0), m_nVacs(0), m_nFlames(0), m_nMines(0)
+	:Actor(IID_PLAYER, startX, startY, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0)
 {
 }
 
 void Player::doSomething()
 {
-	if (!m_alive)	// Player dies
+	if (!alive())	// Player dies
 		return;
 
-	if (m_infected)	// Player is infected
+	if (infected())	// Player is infected
 	{
-		m_infectedCount++;
-		if (m_infectedCount == 500)	// Player becomes a zombie
+		incInfect();
+		if (infectedCount() == 500)	// Player becomes a zombie
 		{
 			kill();
 			return;

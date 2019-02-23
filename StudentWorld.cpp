@@ -81,7 +81,7 @@ int StudentWorld::init()
 int StudentWorld::move()	// TODO: COMPLETE
 {
 	m_player->doSomething();		// Player takes its turn
-	if (!(m_player->isAlive()))
+	if (!(m_player->alive()))
 		return GWSTATUS_PLAYER_DIED;
 
 	list<Actor*>::iterator it = m_actors.begin();
@@ -89,7 +89,7 @@ int StudentWorld::move()	// TODO: COMPLETE
 	{
 		(*it)->doSomething();			// Every Actor takes a turn
 
-		if (!(m_player->isAlive()))		// Check if Player died during that turn
+		if (!(m_player->alive()))		// Check if Player died during that turn
 			return GWSTATUS_PLAYER_DIED;
 
 		it++;
@@ -109,8 +109,15 @@ void StudentWorld::cleanUp()
 	m_actors.clear();		// Prevents undefined behavior in repeated calls of cleanUp()
 }
 
-bool StudentWorld::overlap(double x, double y)
+bool StudentWorld::overlap(double x, double y, const Actor * compare)
 {
+	list<Actor*>::iterator it = m_actors.begin();
+	while (it != m_actors.end())	// Check every Actor in the game right now
+	{
+		if ((*it)->overlapping(x, y, compare))	// The point is close enough to the Actor to overlap sprites
+			return true;						// The point is causing overlap
+		it++;
+	}
 	return false;
 }
 
