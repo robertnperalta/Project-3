@@ -1,5 +1,4 @@
 #include "Actor.h"
-#include "StudentWorld.h"
 #include <list>
 using namespace std;
 
@@ -124,6 +123,13 @@ void Zombie::doSomething()
 		return;
 	}
 
+	something();
+
+	skipNextTurn();
+}
+
+void Zombie::something()
+{
 	// Attempt to vomit
 
 	double vomitX, vomitY;
@@ -162,7 +168,6 @@ void Zombie::doSomething()
 		m_plan = 0;					// Pick a new plan next turn
 	else
 		m_plan--;
-	return;
 }
 
 
@@ -174,14 +179,14 @@ void Zombie::doSomething()
 //	Player
 // 
 
-Player::Player(double startX, double startY, StudentWorld * world)
-	:Human(IID_PLAYER, startX, startY, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0), m_finished(false)
+Player::Player(double x, double y, StudentWorld * world)
+	:Human(IID_PLAYER, x, y, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0), m_finished(false)
 {
 }
 
 void Player::doSomething()
 {
-	if (!alive())	// Player dies
+	if (!alive())	// Player died this turn
 		return;
 
 	if (infected())	// Player is infected
@@ -211,10 +216,126 @@ void Player::doSomething()
 }
 
 //
+//	Citizen
+//
+
+Citizen::Citizen(double x, double y, StudentWorld * world)
+	:Human(IID_CITIZEN, x, y, world, 2)
+{
+}
+
+void Citizen::doSomething()
+{
+	if (!alive())	// Citizen died this turn
+		return;
+
+	if (infected())	// Citizen is infected
+	{
+		incInfect();
+		if (infectedCount() == 500)	// Citizen becomes a zombie
+		{
+			kill();
+			return;
+		}
+	}
+
+	if (paralyzed())	// The Citizen is paralyzed this turn
+	{
+		takeNextTurn();
+		return;
+	}
+
+	something();
+
+	skipNextTurn();
+}
+
+void Citizen::something()
+{
+	double closestZombie = getWorld()->distToZombie(getX(), getY());
+	double closestPlayer = getWorld()->distToPlayer(getX(), getY());
+
+	if ((closestZombie == 0 ||						// No Zombies on the level
+		closestPlayer < closestZombie) &&			// Player is closer than the closest Zombie
+		closestPlayer <= 80)						// Player is 80 pixels away or closer
+	{
+		bool blocked = false;
+		if (getX() == getWorld()->player()->getX())			// Citizen is in the same column as Player
+		{
+			if (getY() < getWorld()->player()->getY())		// Directly below Player
+				blocked = tryMove(up);
+			else if (getY() > getWorld()->player()->getY())	// Directly above Player
+				blocked = tryMove(down);
+
+			if (!blocked)	// The Citizen successfully moved
+				return;
+		}
+		else if (getY() == getWorld()->player()->getY())	// Citizen is in the same row as Player
+		{
+			if (getX() < getWorld()->player()->getX())		// Directly to the left of Player
+				blocked = tryMove(right);
+			else if (getX() > getWorld()->player()->getX())	// Directly to the right of Player
+				blocked = tryMove(left);
+
+			if (!blocked)	// The Citizen successfully moved
+				return;
+		}
+
+		if (!blocked)	// Only try a different path to the player if the Citizen hasn't already moved/tried to move
+		{
+			int horz, vert;	// Determines the two best directions to move to get to the player
+
+			if (getY() < getWorld()->player()->getY())		// Below Player
+				vert = up;
+			else if (getY() > getWorld()->player()->getY())	// Above Player
+				vert = down;
+
+			if (getX() < getWorld()->player()->getX())		// To the left of Player
+				horz = right;
+			else if (getX() > getWorld()->player()->getX())	// To the right of Player
+				horz = left;
+
+			int dir;
+			if (randInt(0, 1))	// Randomly pick a direction to try
+				dir = vert;
+			else
+				dir = horz;
+
+			if (tryMove(dir))	// The move succeeds
+				return;
+			else				// Try moving in the other direction
+				if (dir == vert)
+				{
+					if (tryMove(horz))
+						return;
+				}
+				else if (tryMove(vert))
+					return;
+		}
+	}
+}
+
+void Citizen::burn()
+{
+	setToRemove();
+	getWorld()->decCitizens();
+	getWorld()->playSound(SOUND_CITIZEN_DIE);
+	getWorld()->increaseScore(-1000);
+}
+
+void Citizen::dyingAction()
+{
+	getWorld()->decCitizens();
+	getWorld()->playSound(SOUND_ZOMBIE_BORN);
+	getWorld()->increaseScore(-1000);
+	// TODO: ALLOCATE AND ADD A NEW ZOMBIE
+}
+
+//
 //	Wall
 //
 
-Wall::Wall(double startX, double startY, StudentWorld* world)
+Wall::Wall(double startX, double startY, StudentWorld * world)
 	:Actor(IID_WALL, startX, startY, world)
 {
 }
@@ -246,6 +367,6 @@ void Exit::doSomething()
 	}
 
 	if (getWorld()->nCitizens() == 0)	// No Citizens left on the level
-		if (getWorld()->player()->overlapping(getX(), getY(), this))	// The Player is on the Exit
+		if (getWorld()->overlapsPlayer(getX(), getY(), this))	// The Player is on the Exit
 			getWorld()->player()->finishLevel();	// Finish the level
 }

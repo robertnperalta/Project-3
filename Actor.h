@@ -42,10 +42,10 @@ public:
 
 	virtual bool impassable() const { return false; }
 	virtual bool blocksProj() const { return false; }
-	virtual bool dieFromFire() const { return false; }
-	virtual bool dieFromPit() const { return false; }
+	virtual bool dieFromHazard() const { return false; }
 	virtual bool infectable() const { return false; }
 	virtual bool eatsBrains() const { return false; }
+	virtual bool burns() const { return false; }
 
 private:
 	StudentWorld* m_world;
@@ -75,8 +75,7 @@ public:
 	// Characteristics
 
 	virtual bool impassable() const { return true; }
-	virtual bool dieFromFire() const { return true; }
-	virtual bool dieFromPit() const { return true; }
+	virtual bool dieFromHazard() const { return true; }
 
 protected:
 	void findDest(int dir, int distX, int distY, double& dest_x, double& dest_y);
@@ -124,6 +123,7 @@ public:
 	virtual ~Zombie() {}
 
 	virtual void doSomething();
+	void something();
 
 	// Characteristics
 
@@ -145,7 +145,7 @@ private:
 class Player : public Human
 {
 public:
-	Player(double startX, double startY, StudentWorld* world);
+	Player(double x, double y, StudentWorld* world);
 	virtual ~Player() {}
 
 	virtual void doSomething();
@@ -167,6 +167,23 @@ private:
 	int m_nFlames;
 	int m_nMines;
 	bool m_finished;
+};
+
+//
+//	Citizen
+//
+
+class Citizen : public Human
+{
+public:
+	Citizen(double x, double y, StudentWorld* world);
+	virtual ~Citizen() {}
+
+	virtual void doSomething();
+	void something();
+	void burn();
+
+	virtual void dyingAction();
 };
 
 //
