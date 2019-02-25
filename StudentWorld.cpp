@@ -64,6 +64,8 @@ int StudentWorld::init()
 				case Level::smart_zombie:
 					break;
 				case Level::dumb_zombie:
+					newActor = new DumbZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::player:
 					m_player = new Player(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);

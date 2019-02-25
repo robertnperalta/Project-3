@@ -2,6 +2,24 @@
 #include <list>
 using namespace std;
 
+// Auxiliary functions
+
+int randDir()
+{
+	switch (randInt(1, 4))
+	{
+	case 1:
+		return GraphObject::right;
+	case 2:
+		return GraphObject::left;
+	case 3:
+		return GraphObject::up;
+	case 4:
+		return GraphObject::down;
+	}
+}
+
+
 //////////////////////////////
 //		BASE CLASSES		//
 //////////////////////////////
@@ -108,7 +126,7 @@ Human::Human(int imageID, double x, double y, StudentWorld * world, int moveDist
 //
 
 Zombie::Zombie(double x, double y, StudentWorld * world)
-	:Agent(IID_ZOMBIE, x, y, world, 1)
+	:Agent(IID_ZOMBIE, x, y, world, 1), m_plan(0)
 {
 }
 
@@ -146,6 +164,7 @@ void Zombie::something()
 			foundTarget = true;
 			break;
 		}
+		it++;
 	}
 
 	if (foundTarget && randInt(1, 3) == 1)	// There is a target and it passes the 1 in 3 chance
@@ -329,6 +348,37 @@ void Citizen::dyingAction()
 	getWorld()->playSound(SOUND_ZOMBIE_BORN);
 	getWorld()->increaseScore(-1000);
 	// TODO: ALLOCATE AND ADD A NEW ZOMBIE
+}
+
+//
+//	DumbZombie
+//
+
+DumbZombie::DumbZombie(double x, double y, StudentWorld * world)
+	:Zombie(x, y, world)
+{
+}
+
+void DumbZombie::dyingAction()
+{
+	getWorld()->playSound(SOUND_ZOMBIE_DIE);
+	getWorld()->increaseScore(1000);
+	if (randInt(1, 10) == 1)
+	{
+		double destX, destY;
+		findDest(randDir(), SPRITE_WIDTH, SPRITE_HEIGHT, destX, destY);
+		list<Actor*> overlaps;
+		getWorld()->overlap(destX, destY, overlaps, this);
+		if (overlaps.empty() && !getWorld()->overlapsPlayer(destX, destY, this))
+		{
+			// TODO: ALLOCATE VACCINE AT POINT
+		}
+	}
+}
+
+int DumbZombie::pickDirection()
+{
+	return randDir();
 }
 
 //

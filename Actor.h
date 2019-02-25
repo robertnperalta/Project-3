@@ -41,7 +41,8 @@ public:
 	// Characteristics
 
 	virtual bool impassable() const { return false; }
-	virtual bool blocksProj() const { return false; }
+	virtual bool blocksFire() const { return false; }
+	virtual bool blocksVomit() const { return false; }
 	virtual bool dieFromHazard() const { return false; }
 	virtual bool infectable() const { return false; }
 	virtual bool eatsBrains() const { return false; }
@@ -187,6 +188,22 @@ public:
 };
 
 //
+//	DumbZombie
+//
+
+class DumbZombie : public Zombie
+{
+public:
+	DumbZombie(double x, double y, StudentWorld* world);
+	virtual ~DumbZombie() {}
+
+	virtual void dyingAction();
+
+private:
+	virtual int pickDirection();
+};
+
+//
 //	Wall
 //
 
@@ -198,8 +215,13 @@ public:
 
 	virtual void doSomething() {}
 
-	virtual bool impassable() const { return true; }
 	virtual void dyingAction() {}
+
+	// Characteristics
+
+	virtual bool impassable() const { return true; }
+	virtual bool blocksFire() const { return true; }
+	virtual bool blocksVomit() const { return true; }
 };
 
 //
