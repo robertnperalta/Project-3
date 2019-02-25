@@ -15,6 +15,7 @@ int randDir()
 	case 3:
 		return GraphObject::up;
 	case 4:
+	default:	// Only so all control paths return a value
 		return GraphObject::down;
 	}
 }
@@ -274,7 +275,7 @@ void Citizen::something()
 	double closestZombie = getWorld()->distToZombie(getX(), getY());
 	double closestPlayer = getWorld()->distToPlayer(getX(), getY());
 
-	if ((closestZombie == 0 ||						// No Zombies on the level
+	if ((closestZombie == VIEW_HEIGHT * 2 ||		// No Zombies on the level
 		closestPlayer < closestZombie) &&			// Player is closer than the closest Zombie
 		closestPlayer <= 80)						// Player is 80 pixels away or closer
 	{
@@ -332,6 +333,39 @@ void Citizen::something()
 					return;
 		}
 	}
+
+	if (closestZombie <= 80)
+	{
+		double bestDist = closestZombie;
+		int bestDir = -1;
+		list<int> dirs = { up, down, left, right };
+		list<int>::iterator it = dirs.begin();
+		while (it != dirs.end())	// For each direction
+		{
+			double destX, destY;
+			findDest(*it, moveDist(), moveDist(), destX, destY);
+
+			list<Actor*> blocking;
+			getWorld()->blocked(destX, destY, blocking, this);
+			if (blocking.empty())	// If the motion isn't blocked
+			{
+				double aCloseZombie = getWorld()->distToZombie(destX, destY);
+				if ( aCloseZombie > bestDist)	// If moving in that direction will put the Citizen farther from the closest Zombie
+				{
+					bestDist = aCloseZombie;
+					bestDir = *it;
+				}
+			}
+			it++;	// If a move in a direction is blocked, ignore it and move on
+		}
+
+		if (bestDir >= 0)	// There is a best move to make
+		{
+			tryMove(bestDir);
+			return;
+		}
+	}
+	return;
 }
 
 void Citizen::burn()

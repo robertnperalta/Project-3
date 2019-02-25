@@ -128,7 +128,7 @@ public:
 
 	// Characteristics
 
-	virtual bool eatsBrains() { return true; }
+	virtual bool eatsBrains() const { return true; }
 
 private:
 	int m_plan;

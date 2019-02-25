@@ -193,7 +193,7 @@ void StudentWorld::blocked(double x, double y, list<Actor*> & trues, const Actor
 
 double StudentWorld::distToZombie(double x, double y)
 {
-	double min = 0;
+	double min = VIEW_HEIGHT * 2;	// Initialized to an impossible distance, used as an error result
 	list<Actor*>::iterator it = m_actors.begin();
 	while (it != m_actors.end())
 	{
@@ -201,7 +201,7 @@ double StudentWorld::distToZombie(double x, double y)
 			min = fmin(min, sqrt(pow((*it)->getX() - x, 2) + pow((*it)->getY() - y, 2)));	// Set min to the shortest distance to a Zombie
 		it++;
 	}
-	return min;	// Since two Agents can only get within 16 pixels of each other, min == 0 will mean no Zombies found
+	return min;
 }
 
 double StudentWorld::distToPlayer(double x, double y)
