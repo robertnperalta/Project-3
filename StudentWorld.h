@@ -32,6 +32,7 @@ public:
 	void addActor(Actor* a) { m_actors.push_back(a); }
 	double distToZombie(double x, double y);
 	double distToPlayer(double x, double y);
+	double distToCitizen(double x, double y, Actor*& closest);
 
 private:
 	std::list<Actor*> m_actors;

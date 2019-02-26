@@ -301,7 +301,7 @@ void Citizen::something()
 				return;
 		}
 
-		if (!blocked)	// Only try a different path to the player if the Citizen hasn't already moved/tried to move
+		if (!blocked)	// Only try a different path to the Player if the Citizen hasn't already moved/tried to move
 		{
 			int horz, vert;	// Determines the two best directions to move to get to the player
 
@@ -414,6 +414,62 @@ int DumbZombie::pickDirection()
 {
 	return randDir();
 }
+
+//
+//	SmartZombie
+//
+
+SmartZombie::SmartZombie(double x, double y, StudentWorld * world)
+	:Zombie(x, y, world)
+{
+}
+
+int SmartZombie::pickDirection()
+{
+	Actor* closest = nullptr;
+	double closestDist = getWorld()->distToCitizen(getX(), getY(), closest);
+	if (getWorld()->distToPlayer(getX(), getY()) <= closestDist)
+	{
+		closestDist = getWorld()->distToPlayer(getX(), getY());
+		closest = getWorld()->player();
+	}
+
+	if (closestDist > 80)	// If the closest Human is too far, pick a random direction
+		return randDir();
+
+	if (getX() == closest->getX())			// SmartZombie is in the same column as target
+	{
+		if (getY() < closest->getY())		// Directly below target
+			return up;
+		else if (getY() > closest->getY())	// Directly above target
+			return down;
+	}
+	else if (getY() == closest->getY())	// SmartZombie is in the same row as target
+	{
+		if (getX() < closest->getX())		// Directly to the left of target
+			return right;
+		else if (getX() > closest->getX())	// Directly to the right of target
+			return left;
+	}
+
+	int horz, vert;	// Determines the two best directions to move to get to the target
+	if (getY() < closest->getY())		// Below target
+		vert = up;
+	else if (getY() > closest->getY())	// Above target
+		vert = down;
+
+	if (getX() < closest->getX())		// To the left of target
+		horz = right;
+	else if (getX() > closest->getX())	// To the right of target
+		horz = left;
+
+	int dir;
+	if (randInt(0, 1))	// Randomly pick a direction
+		return vert;
+	else
+		return horz;
+}
+
 
 //
 //	Wall

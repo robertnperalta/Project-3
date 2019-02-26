@@ -204,6 +204,22 @@ private:
 };
 
 //
+//	SmartZombie
+//
+
+class SmartZombie : public Zombie
+{
+public:
+	SmartZombie(double x, double y, StudentWorld* world);
+	virtual ~SmartZombie() {}
+
+	virtual void dyingAction() { getWorld()->playSound(SOUND_ZOMBIE_DIE); getWorld()->increaseScore(2000); }
+
+private:
+	virtual int pickDirection();
+};
+
+//
 //	Wall
 //
 

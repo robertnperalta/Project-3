@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <list>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetPath)
@@ -57,11 +58,13 @@ int StudentWorld::init()
 				Level::MazeEntry ge = lev.getContentsOf(x, y);
 
 				Actor* newActor;
-				switch (ge)	// TODO: ALLOCATE OTHER ACTORS
+				switch (ge)
 				{
 				case Level::empty:
 					break;
 				case Level::smart_zombie:
+					newActor = new SmartZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::dumb_zombie:
 					newActor = new DumbZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
@@ -207,4 +210,20 @@ double StudentWorld::distToZombie(double x, double y)
 double StudentWorld::distToPlayer(double x, double y)
 {
 	return sqrt(pow(m_player->getX() - x, 2) + pow(m_player->getY() - y, 2));	// Returns distance to player from a point
+}
+
+double StudentWorld::distToCitizen(double x, double y, Actor*& closest)
+{
+	double min = VIEW_HEIGHT * 2;	// Initialized to an impossible distance, used as an error result
+	list<Actor*>::iterator it = m_actors.begin();
+	while (it != m_actors.end())
+	{
+		if ((*it)->infectable())	// The Actor is a Citizen
+		{
+			min = fmin(min, sqrt(pow((*it)->getX() - x, 2) + pow((*it)->getY() - y, 2)));	// Set min to the shortest distance to a Zombie
+			closest = *it;		// Return a pointer to the closest Citizen
+		}
+		it++;
+	}
+	return min;
 }
