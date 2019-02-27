@@ -63,6 +63,35 @@ bool Actor::overlapping(double x, double y, const Actor * compare) const
 }
 
 //
+//	Activating
+//
+
+Activating::Activating(int imageID, double x, double y, StudentWorld * world, int dir, int depth)
+	:Actor(imageID, x, y, world, dir, depth), m_playerOverlaps(false)
+{
+}
+
+void Activating::doSomething()
+{
+	getWorld()->overlap(getX(), getY(), m_overlaps, this);
+	m_playerOverlaps = getWorld()->overlapsPlayer(getX(), getY(), this);
+
+	something();	// For anything the Activating might need to do before checking for overlaps
+
+	list<Actor*>::iterator it = overlapsBegin();
+	while (it != overlapsEnd())
+	{
+		tryActivate(*it);				// Try to activate on all overlapping Actors
+		it++;
+	}
+	if (playerOverlaps())				// Try to activate on the Player, if it's overlapping
+		tryActivate(getWorld()->player());
+
+	m_overlaps.clear();
+	m_playerOverlaps = false;
+}
+
+//
 //	Agent
 //
 
@@ -376,6 +405,12 @@ void Citizen::burn()
 	getWorld()->increaseScore(-1000);
 }
 
+void Citizen::whenInfected()
+{
+	if (!infected())		// The Citizen isn't already infected
+		getWorld()->playSound(SOUND_CITIZEN_INFECTED);
+}
+
 void Citizen::dyingAction()
 {
 	getWorld()->decCitizens();
@@ -485,28 +520,22 @@ Wall::Wall(double startX, double startY, StudentWorld * world)
 //
 
 Exit::Exit(double startX, double startY, StudentWorld * world)
-	:Actor(IID_EXIT, startX, startY, world, right, 1)
+	:Activating(IID_EXIT, startX, startY, world, right, 1)
 {
 }
 
-void Exit::doSomething()
+void Exit::tryActivate(Actor * a)
 {
-	list<Actor*> overlaps;
-	getWorld()->overlap(getX(), getY(), overlaps, this);
-	list<Actor*>::iterator it = overlaps.begin();
-	while (it != overlaps.end())
+	if (a == getWorld()->player() && getWorld()->nCitizens() == 0)	// Player is on the exit and there are no more Citizens
 	{
-		if ((*it)->infectable())		// A Citizen is overlapping the Exit
-		{
-			(*it)->setToRemove();	// Remove the Citizen
-			getWorld()->decCitizens();
-			getWorld()->increaseScore(500);
-			getWorld()->playSound(SOUND_CITIZEN_SAVED);
-		}
-		it++;
+		getWorld()->player()->finishLevel();						// End the level
+		return;
 	}
-
-	if (getWorld()->nCitizens() == 0)	// No Citizens left on the level
-		if (getWorld()->overlapsPlayer(getX(), getY(), this))	// The Player is on the Exit
-			getWorld()->player()->finishLevel();	// Finish the level
+	else if (a->infectable() && a != getWorld()->player())
+	{
+		a->setToRemove();	// Remove the Citizen
+		getWorld()->decCitizens();
+		getWorld()->increaseScore(500);
+		getWorld()->playSound(SOUND_CITIZEN_SAVED);
+	}
 }

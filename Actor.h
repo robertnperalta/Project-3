@@ -3,6 +3,7 @@
 
 #include "GraphObject.h"
 #include "StudentWorld.h"
+#include <list>
 
 //////////////////////////////
 //		BASE CLASSES		//
@@ -51,6 +52,31 @@ public:
 private:
 	StudentWorld* m_world;
 	bool m_alive;
+};
+
+//
+//	Activating
+//
+
+class Activating : public Actor
+{
+public:
+	Activating(int imageID, double x, double y, StudentWorld* world, int dir, int depth);
+	virtual ~Activating() {}
+
+	virtual void doSomething();
+	virtual void something() {}
+	virtual void tryActivate(Actor* a) = 0;
+
+	// Accessors
+
+	std::list<Actor*>::iterator overlapsBegin() { return m_overlaps.begin(); }
+	std::list<Actor*>::iterator overlapsEnd() { return m_overlaps.end(); }
+	bool playerOverlaps() const { return m_playerOverlaps; }
+
+private:
+	std::list<Actor*> m_overlaps;
+	bool m_playerOverlaps;
 };
 
 //
@@ -104,7 +130,8 @@ public:
 
 	// Mutators
 
-	virtual void infect() { m_infected = true; }
+	virtual void infect() { whenInfected(); m_infected = true; }
+	virtual void whenInfected() {}
 	void incInfect() { m_infectedCount++; }
 	void vaccinate() { m_infected = false; m_infectedCount = 0; }
 
@@ -184,6 +211,7 @@ public:
 	void something();
 	void burn();
 
+	virtual void whenInfected();
 	virtual void dyingAction();
 };
 
@@ -244,14 +272,18 @@ public:
 //	Exit
 //
 
-class Exit : public Actor
+class Exit : public Activating
 {
 public:
 	Exit(double startX, double startY, StudentWorld* world);
 	virtual ~Exit() {}
 
-	virtual void doSomething();
 	virtual void dyingAction() {}
+	virtual void tryActivate(Actor* a);
+
+	// Characteristics
+
+	virtual bool blocksFire() const { return true; }
 };
 
 #endif // ACTOR_H_
