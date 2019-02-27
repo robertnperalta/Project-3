@@ -268,6 +268,11 @@ void Zombie::something()
 		m_plan--;
 }
 
+//
+//	Goodie
+//
+
+
 
 //////////////////////////////
 //		GAME OBJECTS		//
@@ -278,7 +283,7 @@ void Zombie::something()
 // 
 
 Player::Player(double x, double y, StudentWorld * world)
-	:Human(IID_PLAYER, x, y, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0), m_finished(false)
+	:Human(IID_PLAYER, x, y, world, 4), m_nVacs(0), m_nFlames(10), m_nMines(0), m_finished(false)
 {
 }
 
@@ -639,4 +644,51 @@ void Flame::tryActivate(Actor * a)
 {
 	if (a->dieFromHazard())
 		a->kill();
+}
+
+Goodie::Goodie(int imageID, double x, double y, StudentWorld * world)
+	:Activating(imageID, x, y, world, right, 1)
+{
+}
+
+void Goodie::tryActivate(Actor * a)
+{
+	if (playerOverlaps())
+	{
+		kill();
+	}
+}
+
+void Goodie::dyingAction()
+{
+	getWorld()->increaseScore(50);
+	getWorld()->playSound(SOUND_GOT_GOODIE);
+	incContains();
+}
+
+//
+//	VaccineGoodie
+//
+
+VaccineGoodie::VaccineGoodie(double x, double y, StudentWorld * world)
+	:Goodie(IID_VACCINE_GOODIE, x, y, world)
+{
+}
+
+//
+//	GasCanGoodie
+//
+
+GasCanGoodie::GasCanGoodie(double x, double y, StudentWorld * world)
+	:Goodie(IID_GAS_CAN_GOODIE, x, y, world)
+{
+}
+
+//
+//	LandmineGoodie
+//
+
+LandmineGoodie::LandmineGoodie(double x, double y, StudentWorld * world)
+	:Goodie(IID_LANDMINE_GOODIE, x, y, world)
+{
 }

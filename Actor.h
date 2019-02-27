@@ -47,7 +47,6 @@ public:
 	virtual bool dieFromHazard() const { return false; }
 	virtual bool infectable() const { return false; }
 	virtual bool eatsBrains() const { return false; }
-	virtual bool burns() const { return false; }
 
 private:
 	StudentWorld* m_world;
@@ -162,6 +161,26 @@ private:
 	virtual int pickDirection() = 0;
 };
 
+//
+//	Goodie
+//
+
+class Goodie : public Activating
+{
+public:
+	Goodie(int imageID, double x, double y, StudentWorld* world);
+	virtual ~Goodie() {}
+
+	virtual void tryActivate(Actor* a);
+	virtual void incContains() = 0;
+
+	virtual void dyingAction();
+
+	// Characteristics
+
+	virtual bool dieFromHazards() { return true; }
+};
+
 //////////////////////////////
 //		GAME OBJECTS		//
 //////////////////////////////
@@ -189,6 +208,9 @@ public:
 
 	void finishLevel() { m_finished = true; }
 	virtual void dyingAction() { getWorld()->decLives(); getWorld()->playSound(SOUND_PLAYER_DIE); }
+	void incVacs() { m_nVacs++; }
+	void incFlames() { m_nFlames++; }
+	void incMines() { m_nMines++; }
 
 private:
 	int m_nVacs;
@@ -311,6 +333,45 @@ public:
 
 private:
 	int m_ticksAlive;
+};
+
+//
+//	VaccineGoodie
+//
+
+class VaccineGoodie : public Goodie
+{
+public:
+	VaccineGoodie(double x, double y, StudentWorld* world);
+	virtual ~VaccineGoodie() {}
+
+	virtual void incContains() { getWorld()->player()->incVacs(); }
+};
+
+//
+//	GasCanGoodie
+//
+
+class GasCanGoodie : public Goodie
+{
+public:
+	GasCanGoodie(double x, double y, StudentWorld* world);
+	virtual ~GasCanGoodie() {}
+
+	virtual void incContains() { getWorld()->player()->incFlames(); }
+};
+
+//
+//	LandmineGoodie
+//
+
+class LandmineGoodie : public Goodie
+{
+public:
+	LandmineGoodie(double x, double y, StudentWorld* world);
+	virtual ~LandmineGoodie() {}
+
+	virtual void incContains() { getWorld()->player()->incMines(); }
 };
 
 #endif // ACTOR_H_

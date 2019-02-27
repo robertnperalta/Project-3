@@ -63,12 +63,12 @@ int StudentWorld::init()
 				case Level::empty:
 					break;
 				case Level::smart_zombie:
-					//newActor = new SmartZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
-					//m_actors.push_back(newActor);
+					newActor = new SmartZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::dumb_zombie:
-					//newActor = new DumbZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
-					//m_actors.push_back(newActor);
+					newActor = new DumbZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::player:
 					m_player = new Player(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
@@ -91,10 +91,16 @@ int StudentWorld::init()
 					m_nCitizens++;
 					break;
 				case Level::vaccine_goodie:
+					newActor = new VaccineGoodie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::gas_can_goodie:
+					newActor = new GasCanGoodie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::landmine_goodie:
+					newActor = new LandmineGoodie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				}
 			}
