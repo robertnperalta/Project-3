@@ -25,84 +25,45 @@ void makeFlameLine(double x, double y, StudentWorld* world, int nFlames, int dir
 	if (flamesDir < 0)	// If the flames don't need to be facing a certain way, have them face the direction the are being created
 		flamesDir = dir;
 
-	list<double*> destX, destY;
-	for (int k = 0; k < nFlames; k++)	// For each flame in the line, dynamically allocate its destination coordinates
+	for (int k = 0; k < nFlames; k++)	// For each Flame in the line
 	{
-		switch (dir)
+		double destX, destY;
+		switch (dir)					// Find where it would be allocated
 		{
 		case GraphObject::left:
-			destX.push_back(new double(x - (SPRITE_WIDTH * (k + 1))));
-			destY.push_back(new double(y));
+			destX = x - SPRITE_WIDTH * (k + 1);
+			destY = y;
 			break;
 		case GraphObject::right:
-			destX.push_back(new double(x + (SPRITE_WIDTH * (k + 1))));
-			destY.push_back(new double(y));
+			destX = x + SPRITE_WIDTH * (k + 1);
+			destY = y;
 			break;
 		case GraphObject::up:
-			destX.push_back(new double(x));
-			destY.push_back(new double(y + (SPRITE_HEIGHT * (k + 1))));
+			destX = x;
+			destY = y + SPRITE_HEIGHT * (k + 1);
 			break;
 		case GraphObject::down:
-			destX.push_back(new double(x));
-			destY.push_back(new double(y - (SPRITE_HEIGHT * (k + 1))));
+			destX = x;
+			destY = y - SPRITE_HEIGHT * (k + 1);
 			break;
 		}
-	}
 
-	bool blocked = false;
-	list<double*>::iterator xit = destX.begin(), yit = destY.begin();
-	list<Actor*> overlaps;
-	while (xit != destX.end() && yit != destY.end())	// For each pair of destination coordinates, check if something is overlapping it
-	{
-		world->overlap(**xit, **yit, overlaps, nullptr);
-		if (!overlaps.empty())
+		list<Actor*> overlaps;
+		world->overlap(destX, destY, overlaps, nullptr);
+		list<Actor*>::iterator it = overlaps.begin();
+		bool doubleBreak = false;
+		while (it != overlaps.end())	// Check if the Flame would be overlapping something that blocks it
 		{
-			list<Actor*>::iterator oit = overlaps.begin();
-			while (oit != overlaps.end())
+			if ((*it)->blocksFire())
 			{
-				if ((*oit)->impassable())	// Check if any of the overlapping Actors is impassable
-				{
-					blocked = true;
-					break;
-				}
+				doubleBreak = true;
+				break;
 			}
 		}
-		overlaps.clear();	// Clear the overlaps list for the next loop
-		if (blocked)
+		if (doubleBreak)
 			break;
-		xit++;
-		yit++;
-	}
-
-	if (blocked)	// If the line is blocked, remove that coordinate and all next ones
-	{
-
-		while (xit != destX.end() && yit != destY.end())	// Remove all blocked coordinates
-		{
-			delete *xit;
-			xit = destX.erase(xit);
-			delete *yit;
-			yit = destY.erase(yit);
-		}
-	}
-
-	xit = destX.begin();
-	yit = destY.begin();
-	while (xit != destX.end() && yit != destY.end())	// Allocate flames at all the surviving coordinates
-	{
-		world->addActor(new Flame(**xit, **yit, world, flamesDir));
-		xit++;
-		yit++;
-	}
-
-	xit = destX.begin();
-	yit = destY.begin();
-	while (xit != destX.end() && yit != destY.end())	// Delete remaining coordinates
-	{
-		delete *xit;
-		xit = destX.erase(xit);
-		delete *yit;
-		yit = destY.erase(yit);
+		else
+			world->addActor(new Flame(destX, destY, world, flamesDir));	// Allocate the Flame if nothing is blocking it
 	}
 }
 
