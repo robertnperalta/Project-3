@@ -20,6 +20,91 @@ int randDir()
 	}
 }
 
+void makeFlameLine(double x, double y, StudentWorld* world, int nFlames, int dir, int flamesDir = -1)
+{
+	if (flamesDir < 0)	// If the flames don't need to be facing a certain way, have them face the direction the are being created
+		flamesDir = dir;
+
+	list<double*> destX, destY;
+	for (int k = 0; k < nFlames; k++)	// For each flame in the line, dynamically allocate its destination coordinates
+	{
+		switch (dir)
+		{
+		case GraphObject::left:
+			destX.push_back(new double(x - (SPRITE_WIDTH * (k + 1))));
+			destY.push_back(new double(y));
+			break;
+		case GraphObject::right:
+			destX.push_back(new double(x + (SPRITE_WIDTH * (k + 1))));
+			destY.push_back(new double(y));
+			break;
+		case GraphObject::up:
+			destX.push_back(new double(x));
+			destY.push_back(new double(y + (SPRITE_HEIGHT * (k + 1))));
+			break;
+		case GraphObject::down:
+			destX.push_back(new double(x));
+			destY.push_back(new double(y - (SPRITE_HEIGHT * (k + 1))));
+			break;
+		}
+	}
+
+	bool blocked = false;
+	list<double*>::iterator xit = destX.begin(), yit = destY.begin();
+	list<Actor*> overlaps;
+	while (xit != destX.end() && yit != destY.end())	// For each pair of destination coordinates, check if something is overlapping it
+	{
+		world->overlap(**xit, **yit, overlaps, nullptr);
+		if (!overlaps.empty())
+		{
+			list<Actor*>::iterator oit = overlaps.begin();
+			while (oit != overlaps.end())
+			{
+				if ((*oit)->impassable())	// Check if any of the overlapping Actors is impassable
+				{
+					blocked = true;
+					break;
+				}
+			}
+		}
+		overlaps.clear();	// Clear the overlaps list for the next loop
+		if (blocked)
+			break;
+		xit++;
+		yit++;
+	}
+
+	if (blocked)	// If the line is blocked, remove that coordinate and all next ones
+	{
+
+		while (xit != destX.end() && yit != destY.end())	// Remove all blocked coordinates
+		{
+			delete *xit;
+			xit = destX.erase(xit);
+			delete *yit;
+			yit = destY.erase(yit);
+		}
+	}
+
+	xit = destX.begin();
+	yit = destY.begin();
+	while (xit != destX.end() && yit != destY.end())	// Allocate flames at all the surviving coordinates
+	{
+		world->addActor(new Flame(**xit, **yit, world, flamesDir));
+		xit++;
+		yit++;
+	}
+
+	xit = destX.begin();
+	yit = destY.begin();
+	while (xit != destX.end() && yit != destY.end())	// Delete remaining coordinates
+	{
+		delete *xit;
+		xit = destX.erase(xit);
+		delete *yit;
+		yit = destY.erase(yit);
+	}
+}
 
 //////////////////////////////
 //		BASE CLASSES		//
@@ -73,10 +158,13 @@ Activating::Activating(int imageID, double x, double y, StudentWorld * world, in
 
 void Activating::doSomething()
 {
+	something();	// For anything the Activating might need to do before checking for overlaps
+
+	if (!alive())
+		return;
+
 	getWorld()->overlap(getX(), getY(), m_overlaps, this);
 	m_playerOverlaps = getWorld()->overlapsPlayer(getX(), getY(), this);
-
-	something();	// For anything the Activating might need to do before checking for overlaps
 
 	list<Actor*>::iterator it = overlapsBegin();
 	while (it != overlapsEnd())
@@ -257,7 +345,14 @@ void Player::doSomething()
 		case KEY_PRESS_RIGHT:	tryMove(right);		break;
 		case KEY_PRESS_UP:		tryMove(up);		break;
 		case KEY_PRESS_DOWN:	tryMove(down);		break;
-		case KEY_PRESS_SPACE:				// TODO: IMPLEMENT OTHER FUNCTIONS
+
+		case KEY_PRESS_SPACE:
+			if (m_nFlames > 0)
+			{
+				makeFlameLine(getX(), getY(), getWorld(), 3, getDirection());
+				m_nFlames--;
+			}
+			break;		
 		case KEY_PRESS_TAB:
 		case KEY_PRESS_ENTER:	break;
 		}
@@ -283,7 +378,7 @@ void Citizen::doSomething()
 		incInfect();
 		if (infectedCount() == 500)	// Citizen becomes a zombie
 		{
-			kill();
+			turnIntoZombie();
 			return;
 		}
 	}
@@ -397,12 +492,15 @@ void Citizen::something()
 	return;
 }
 
-void Citizen::burn()
+void Citizen::turnIntoZombie()
 {
-	setToRemove();
 	getWorld()->decCitizens();
-	getWorld()->playSound(SOUND_CITIZEN_DIE);
+	getWorld()->playSound(SOUND_ZOMBIE_BORN);
 	getWorld()->increaseScore(-1000);
+	if (randInt(1, 10) < 4)		// 30% chance of a SmartZombie
+		getWorld()->addActor(new SmartZombie(getX(), getY(), getWorld()));
+	else
+		getWorld()->addActor(new DumbZombie(getX(), getY(), getWorld()));
 }
 
 void Citizen::whenInfected()
@@ -413,10 +511,10 @@ void Citizen::whenInfected()
 
 void Citizen::dyingAction()
 {
+	setToRemove();
 	getWorld()->decCitizens();
-	getWorld()->playSound(SOUND_ZOMBIE_BORN);
+	getWorld()->playSound(SOUND_CITIZEN_DIE);
 	getWorld()->increaseScore(-1000);
-	// TODO: ALLOCATE AND ADD A NEW ZOMBIE
 }
 
 //
@@ -505,7 +603,6 @@ int SmartZombie::pickDirection()
 		return horz;
 }
 
-
 //
 //	Wall
 //
@@ -519,23 +616,66 @@ Wall::Wall(double startX, double startY, StudentWorld * world)
 //	Exit
 //
 
-Exit::Exit(double startX, double startY, StudentWorld * world)
-	:Activating(IID_EXIT, startX, startY, world, right, 1)
+Exit::Exit(double x, double y, StudentWorld * world)
+	:Activating(IID_EXIT, x, y, world, right, 1)
 {
 }
 
 void Exit::tryActivate(Actor * a)
 {
-	if (a == getWorld()->player() && getWorld()->nCitizens() == 0)	// Player is on the exit and there are no more Citizens
+	if (a == getWorld()->player())					// Player is on the exit and there are no more Citizens
 	{
-		getWorld()->player()->finishLevel();						// End the level
-		return;
+		if (getWorld()->nCitizens() == 0)
+		{
+			getWorld()->player()->finishLevel();						// End the level
+			return;
+		}
 	}
-	else if (a->infectable() && a != getWorld()->player())
+	else if (a->infectable())
 	{
 		a->setToRemove();	// Remove the Citizen
 		getWorld()->decCitizens();
 		getWorld()->increaseScore(500);
 		getWorld()->playSound(SOUND_CITIZEN_SAVED);
 	}
+}
+
+//
+//	Pit
+//
+
+Pit::Pit(double x, double y, StudentWorld * world)
+	:Activating(IID_PIT, x, y, world, right, 0)
+{
+}
+
+void Pit::tryActivate(Actor * a)
+{
+	if (a->dieFromHazard())
+		a->kill();
+}
+
+//
+//	Flame
+//
+
+Flame::Flame(double x, double y, StudentWorld * world, int dir)
+	:Activating(IID_FLAME, x, y, world, dir, 0), m_ticksAlive(0)
+{
+}
+
+void Flame::something()
+{
+	if (m_ticksAlive == 2)	// If the Flame has been around for 2 ticks, destroy it
+	{
+		setToRemove();
+		return;
+	}
+	m_ticksAlive++;
+}
+
+void Flame::tryActivate(Actor * a)
+{
+	if (a->dieFromHazard())
+		a->kill();
 }

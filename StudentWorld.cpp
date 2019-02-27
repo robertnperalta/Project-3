@@ -63,12 +63,12 @@ int StudentWorld::init()
 				case Level::empty:
 					break;
 				case Level::smart_zombie:
-					newActor = new SmartZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
-					m_actors.push_back(newActor);
+					//newActor = new SmartZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					//m_actors.push_back(newActor);
 					break;
 				case Level::dumb_zombie:
-					newActor = new DumbZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
-					m_actors.push_back(newActor);
+					//newActor = new DumbZombie(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					//m_actors.push_back(newActor);
 					break;
 				case Level::player:
 					m_player = new Player(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
@@ -82,6 +82,8 @@ int StudentWorld::init()
 					m_actors.push_back(newActor);
 					break;
 				case Level::pit:
+					newActor = new Pit(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);
+					m_actors.push_back(newActor);
 					break;
 				case Level::citizen:
 					newActor = new Citizen(x * SPRITE_WIDTH, y * SPRITE_HEIGHT, this);

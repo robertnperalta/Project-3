@@ -30,7 +30,7 @@ public:
 
 	void setToRemove() { m_alive = false; }				// Sets for game to remove
 	void kill() { setToRemove(); dyingAction(); }		// Does other actions (points, sounds, etc.)
-	virtual void dyingAction() = 0;
+	virtual void dyingAction() {}
 
 	virtual void infect() {}
 
@@ -188,7 +188,7 @@ public:
 	// Mutators
 
 	void finishLevel() { m_finished = true; }
-	virtual void dyingAction() { getWorld()->playSound(SOUND_PLAYER_DIE); }
+	virtual void dyingAction() { getWorld()->decLives(); getWorld()->playSound(SOUND_PLAYER_DIE); }
 
 private:
 	int m_nVacs;
@@ -209,7 +209,7 @@ public:
 
 	virtual void doSomething();
 	void something();
-	void burn();
+	void turnIntoZombie();
 
 	virtual void whenInfected();
 	virtual void dyingAction();
@@ -259,8 +259,6 @@ public:
 
 	virtual void doSomething() {}
 
-	virtual void dyingAction() {}
-
 	// Characteristics
 
 	virtual bool impassable() const { return true; }
@@ -275,15 +273,44 @@ public:
 class Exit : public Activating
 {
 public:
-	Exit(double startX, double startY, StudentWorld* world);
+	Exit(double x, double y, StudentWorld* world);
 	virtual ~Exit() {}
 
-	virtual void dyingAction() {}
 	virtual void tryActivate(Actor* a);
 
 	// Characteristics
 
 	virtual bool blocksFire() const { return true; }
+};
+
+//
+//	Pit
+//
+
+class Pit : public Activating
+{
+public:
+	Pit(double x, double y, StudentWorld* world);
+	virtual ~Pit() {}
+
+	virtual void tryActivate(Actor* a);
+};
+
+//
+//	Flame
+//
+
+class Flame : public Activating
+{
+public:
+	Flame(double x, double y, StudentWorld* world, int dir);
+	virtual ~Flame() {}
+
+	virtual void something();
+	virtual void tryActivate(Actor* a);
+
+private:
+	int m_ticksAlive;
 };
 
 #endif // ACTOR_H_
