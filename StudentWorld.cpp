@@ -141,9 +141,16 @@ int StudentWorld::move()	// TODO: COMPLETE
 	}
 
 	ostringstream oss;	// Set up and print the status text
+	int score = getScore();
 	oss << "Score: ";
 	oss.fill('0');
-	oss << setw(6) << getScore() << "  Level: " << getLevel()
+	if (score < 0)	// Move the negative to the front of the score
+	{
+		oss << "-";
+		score *= -1;	// Remove the negative
+	}
+	oss << setw(6) << score;
+	oss << "  Level: " << getLevel()
 		<< "  Lives: " << getLives() << "  Vaccines: " << m_player->nVacs()
 		<< "  Flames: " << m_player->nFlames() << "  Mines: " << m_player->nMines()
 		<< "  Infected: " << m_player->infectedCount();

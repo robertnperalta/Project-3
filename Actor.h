@@ -47,6 +47,7 @@ public:
 	virtual bool dieFromHazard() const { return false; }
 	virtual bool infectable() const { return false; }
 	virtual bool eatsBrains() const { return false; }
+	virtual bool burns() const { return false; }
 
 private:
 	StudentWorld* m_world;
@@ -73,9 +74,30 @@ public:
 	std::list<Actor*>::iterator overlapsEnd() { return m_overlaps.end(); }
 	bool playerOverlaps() const { return m_playerOverlaps; }
 
+	// Mutators
+
+	void stop() { m_stop = true; }
+
 private:
 	std::list<Actor*> m_overlaps;
 	bool m_playerOverlaps;
+	bool m_stop;
+};
+
+//
+//	Projectile
+//
+
+class Projectile : public Activating
+{
+public:
+	Projectile(int imageID, double x, double y, StudentWorld* world, int dir);
+	virtual ~Projectile() {}
+
+	virtual void something();
+
+private:
+	int m_ticksAlive;
 };
 
 //
@@ -143,6 +165,10 @@ private:
 	int m_infectedCount;
 };
 
+//
+//	Zombie
+//
+
 class Zombie : public Agent
 {
 public:
@@ -174,11 +200,9 @@ public:
 	virtual void tryActivate(Actor* a);
 	virtual void incContains() = 0;
 
-	virtual void dyingAction();
-
 	// Characteristics
 
-	virtual bool dieFromHazards() { return true; }
+	virtual bool dieFromHazard() const { return true; }
 };
 
 //////////////////////////////
@@ -209,10 +233,11 @@ public:
 	void finishLevel() { m_finished = true; }
 	virtual void dyingAction() { getWorld()->decLives(); getWorld()->playSound(SOUND_PLAYER_DIE); }
 	void incVacs() { m_nVacs++; }
-	void incFlames() { m_nFlames++; }
-	void incMines() { m_nMines++; }
+	void incFlames() { m_nFlames += 5; }
+	void incMines() { m_nMines += 2; }
 
 private:
+	void makeFlameLine();
 	int m_nVacs;
 	int m_nFlames;
 	int m_nMines;
@@ -319,20 +344,53 @@ public:
 };
 
 //
+//	Landmine
+//
+
+class Landmine : public Activating
+{
+public:
+	Landmine(double x, double y, StudentWorld* world);
+	virtual ~Landmine() {}
+
+	virtual void something();
+	virtual void tryActivate(Actor* a);
+
+	virtual void dyingAction();
+
+private:
+	int m_safetyTicks;
+	bool m_armed;
+};
+
+//
 //	Flame
 //
 
-class Flame : public Activating
+class Flame : public Projectile
 {
 public:
 	Flame(double x, double y, StudentWorld* world, int dir);
 	virtual ~Flame() {}
 
-	virtual void something();
 	virtual void tryActivate(Actor* a);
 
-private:
-	int m_ticksAlive;
+	// Characteristics
+
+	virtual bool burns() const { return true; }
+};
+
+//
+//	Vomit
+//
+
+class Vomit : public Projectile
+{
+public:
+	Vomit(double x, double y, StudentWorld* world, int dir);
+	virtual ~Vomit() {}
+
+	virtual void tryActivate(Actor* a);
 };
 
 //

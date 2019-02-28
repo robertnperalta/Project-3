@@ -20,53 +20,6 @@ int randDir()
 	}
 }
 
-void makeFlameLine(double x, double y, StudentWorld* world, int nFlames, int dir, int flamesDir = -1)
-{
-	if (flamesDir < 0)	// If the flames don't need to be facing a certain way, have them face the direction the are being created
-		flamesDir = dir;
-
-	for (int k = 0; k < nFlames; k++)	// For each Flame in the line
-	{
-		double destX, destY;
-		switch (dir)					// Find where it would be allocated
-		{
-		case GraphObject::left:
-			destX = x - SPRITE_WIDTH * (k + 1);
-			destY = y;
-			break;
-		case GraphObject::right:
-			destX = x + SPRITE_WIDTH * (k + 1);
-			destY = y;
-			break;
-		case GraphObject::up:
-			destX = x;
-			destY = y + SPRITE_HEIGHT * (k + 1);
-			break;
-		case GraphObject::down:
-			destX = x;
-			destY = y - SPRITE_HEIGHT * (k + 1);
-			break;
-		}
-
-		list<Actor*> overlaps;
-		world->overlap(destX, destY, overlaps, nullptr);
-		list<Actor*>::iterator it = overlaps.begin();
-		bool doubleBreak = false;
-		while (it != overlaps.end())	// Check if the Flame would be overlapping something that blocks it
-		{
-			if ((*it)->blocksFire())
-			{
-				doubleBreak = true;
-				break;
-			}
-		}
-		if (doubleBreak)
-			break;
-		else
-			world->addActor(new Flame(destX, destY, world, flamesDir));	// Allocate the Flame if nothing is blocking it
-	}
-}
-
 //////////////////////////////
 //		BASE CLASSES		//
 //////////////////////////////
@@ -113,7 +66,7 @@ bool Actor::overlapping(double x, double y, const Actor * compare) const
 //
 
 Activating::Activating(int imageID, double x, double y, StudentWorld * world, int dir, int depth)
-	:Actor(imageID, x, y, world, dir, depth), m_playerOverlaps(false)
+	:Actor(imageID, x, y, world, dir, depth), m_playerOverlaps(false), m_stop(false)
 {
 }
 
@@ -121,8 +74,11 @@ void Activating::doSomething()
 {
 	something();	// For anything the Activating might need to do before checking for overlaps
 
-	if (!alive())
+	if (!alive() || m_stop)	// The Activating is dead or needs to skip this tick of doSomething()
+	{
+		m_stop = false;
 		return;
+	}
 
 	getWorld()->overlap(getX(), getY(), m_overlaps, this);
 	m_playerOverlaps = getWorld()->overlapsPlayer(getX(), getY(), this);
@@ -138,6 +94,25 @@ void Activating::doSomething()
 
 	m_overlaps.clear();
 	m_playerOverlaps = false;
+}
+
+//
+//	Projectile
+//
+
+Projectile::Projectile(int imageID, double x, double y, StudentWorld * world, int dir)
+	:Activating(imageID, x, y, world, dir, 0), m_ticksAlive(0)
+{
+}
+
+void Projectile::something()
+{
+	if (m_ticksAlive == 2)	// If the Pojectile has been around for 2 ticks, destroy it
+	{
+		setToRemove();
+		return;
+	}
+	m_ticksAlive++;
 }
 
 //
@@ -232,7 +207,9 @@ void Zombie::something()
 	double vomitX, vomitY;
 	findDest(getDirection(), SPRITE_WIDTH, SPRITE_HEIGHT, vomitX, vomitY);	// Find where the vomit would be
 	list<Actor*> overlapsVomit;
-	getWorld()->overlap(vomitX, vomitY, overlapsVomit, this);
+	getWorld()->overlap(vomitX, vomitY, overlapsVomit, this);	// Get a list of Actors that would be hit by the Vomit
+	if (getWorld()->overlapsPlayer(vomitX, vomitY, this))	// If Player would be hit, add it to the list
+		overlapsVomit.push_back(getWorld()->player());
 
 	bool foundTarget = false;
 	list<Actor*>::iterator it = overlapsVomit.begin();
@@ -248,7 +225,7 @@ void Zombie::something()
 
 	if (foundTarget && randInt(1, 3) == 1)	// There is a target and it passes the 1 in 3 chance
 	{
-		// TODO: ALLOCATE VOMIT, ADD TO STUDENTWORLD
+		getWorld()->addActor(new Vomit(vomitX, vomitY, getWorld(), getDirection()));
 		return;
 	}
 
@@ -272,7 +249,21 @@ void Zombie::something()
 //	Goodie
 //
 
+Goodie::Goodie(int imageID, double x, double y, StudentWorld * world)
+	:Activating(imageID, x, y, world, right, 1)
+{
+}
 
+void Goodie::tryActivate(Actor * a)
+{
+	if (playerOverlaps())
+	{
+		setToRemove();
+		getWorld()->increaseScore(50);
+		getWorld()->playSound(SOUND_GOT_GOODIE);
+		incContains();
+	}
+}
 
 //////////////////////////////
 //		GAME OBJECTS		//
@@ -283,7 +274,7 @@ void Zombie::something()
 // 
 
 Player::Player(double x, double y, StudentWorld * world)
-	:Human(IID_PLAYER, x, y, world, 4), m_nVacs(0), m_nFlames(10), m_nMines(0), m_finished(false)
+	:Human(IID_PLAYER, x, y, world, 4), m_nVacs(0), m_nFlames(0), m_nMines(0), m_finished(false)
 {
 }
 
@@ -315,13 +306,70 @@ void Player::doSomething()
 		case KEY_PRESS_SPACE:
 			if (m_nFlames > 0)
 			{
-				makeFlameLine(getX(), getY(), getWorld(), 3, getDirection());
+				makeFlameLine();
 				m_nFlames--;
 			}
 			break;		
 		case KEY_PRESS_TAB:
-		case KEY_PRESS_ENTER:	break;
+			if (m_nMines > 0)
+			{
+				getWorld()->addActor(new Landmine(getX(), getY(), getWorld()));
+				m_nMines--;
+			}
+			break;
+		case KEY_PRESS_ENTER:
+			if (m_nVacs > 0)
+			{
+				vaccinate();
+				m_nVacs--;
+			}
+			break;
 		}
+	}
+}
+
+void Player::makeFlameLine()
+{
+	for (int k = 0; k < 3; k++)	// For each Flame in the line
+	{
+		double destX, destY;
+		switch (getDirection())					// Find where it would be allocated
+		{
+		case GraphObject::left:
+			destX = getX() - SPRITE_WIDTH * (k + 1);
+			destY = getY();
+			break;
+		case GraphObject::right:
+			destX = getX() + SPRITE_WIDTH * (k + 1);
+			destY = getY();
+			break;
+		case GraphObject::up:
+			destX = getX();
+			destY = getY() + SPRITE_HEIGHT * (k + 1);
+			break;
+		case GraphObject::down:
+			destX = getX();
+			destY = getY() - SPRITE_HEIGHT * (k + 1);
+			break;
+		}
+
+		list<Actor*> overlaps;
+		getWorld()->overlap(destX, destY, overlaps, nullptr);
+		list<Actor*>::iterator it = overlaps.begin();
+		bool doubleBreak = false;
+		while (it != overlaps.end())	// Check if the Flame would be overlapping something that blocks it
+		{
+			if ((*it)->blocksFire())
+			{
+				doubleBreak = true;
+				break;
+			}
+			it++;
+		}
+		if (doubleBreak)
+			break;
+		else
+			getWorld()->addActor(new Flame(destX, destY, getWorld(), getDirection()));	// Allocate the Flame if nothing is blocking it
 	}
 }
 
@@ -460,6 +508,7 @@ void Citizen::something()
 
 void Citizen::turnIntoZombie()
 {
+	setToRemove();
 	getWorld()->decCitizens();
 	getWorld()->playSound(SOUND_ZOMBIE_BORN);
 	getWorld()->increaseScore(-1000);
@@ -504,7 +553,7 @@ void DumbZombie::dyingAction()
 		getWorld()->overlap(destX, destY, overlaps, this);
 		if (overlaps.empty() && !getWorld()->overlapsPlayer(destX, destY, this))
 		{
-			// TODO: ALLOCATE VACCINE AT POINT
+			getWorld()->addActor(new VaccineGoodie(destX, destY, getWorld()));
 		}
 	}
 }
@@ -562,7 +611,6 @@ int SmartZombie::pickDirection()
 	else if (getX() > closest->getX())	// To the right of target
 		horz = left;
 
-	int dir;
 	if (randInt(0, 1))	// Randomly pick a direction
 		return vert;
 	else
@@ -593,7 +641,7 @@ void Exit::tryActivate(Actor * a)
 	{
 		if (getWorld()->nCitizens() == 0)
 		{
-			getWorld()->player()->finishLevel();						// End the level
+			getWorld()->player()->finishLevel();	// End the level
 			return;
 		}
 	}
@@ -622,22 +670,59 @@ void Pit::tryActivate(Actor * a)
 }
 
 //
+//	Landmine
+//
+
+Landmine::Landmine(double x, double y, StudentWorld * world)
+	:Activating(IID_LANDMINE, x, y, world, right, 1), m_safetyTicks(30), m_armed(false)
+{
+}
+
+void Landmine::something()
+{
+	if (m_safetyTicks >= 0)
+	{
+		if (m_safetyTicks == 0)
+			m_armed = true;
+
+		m_safetyTicks--;	// If the Landmine is armed, m_safetyTicks < 0, so this code will never execute again
+		stop();
+		return;
+	}
+}
+
+void Landmine::tryActivate(Actor * a)
+{
+	if (a->infectable() || a->eatsBrains() || a->burns())
+	{
+		kill();
+	}
+}
+
+void Landmine::dyingAction()
+{
+	getWorld()->playSound(SOUND_LANDMINE_EXPLODE);
+																							// Allocate Flames:
+	getWorld()->addActor(new Flame(getX(), getY(), getWorld(), up));								// At point
+	getWorld()->addActor(new Flame(getX(), getY() + SPRITE_HEIGHT, getWorld(), up));				// Top
+	getWorld()->addActor(new Flame(getX(), getY() - SPRITE_HEIGHT, getWorld(), up));				// Bottom
+	getWorld()->addActor(new Flame(getX() - SPRITE_WIDTH, getY(), getWorld(), up));					// Left
+	getWorld()->addActor(new Flame(getX() + SPRITE_WIDTH, getY(), getWorld(), up));					// Right
+	getWorld()->addActor(new Flame(getX() + SPRITE_WIDTH, getY() + SPRITE_HEIGHT, getWorld(), up));	// Top right
+	getWorld()->addActor(new Flame(getX() - SPRITE_WIDTH, getY() + SPRITE_HEIGHT, getWorld(), up));	// Top left
+	getWorld()->addActor(new Flame(getX() + SPRITE_WIDTH, getY() - SPRITE_HEIGHT, getWorld(), up));	// Bottom right
+	getWorld()->addActor(new Flame(getX() - SPRITE_WIDTH, getY() - SPRITE_HEIGHT, getWorld(), up));	// Bottom left
+
+	getWorld()->addActor(new Pit(getX(), getY(), getWorld()));	// Allocate Pit
+}
+
+//
 //	Flame
 //
 
 Flame::Flame(double x, double y, StudentWorld * world, int dir)
-	:Activating(IID_FLAME, x, y, world, dir, 0), m_ticksAlive(0)
+	:Projectile(IID_FLAME, x, y, world, dir)
 {
-}
-
-void Flame::something()
-{
-	if (m_ticksAlive == 2)	// If the Flame has been around for 2 ticks, destroy it
-	{
-		setToRemove();
-		return;
-	}
-	m_ticksAlive++;
 }
 
 void Flame::tryActivate(Actor * a)
@@ -646,24 +731,19 @@ void Flame::tryActivate(Actor * a)
 		a->kill();
 }
 
-Goodie::Goodie(int imageID, double x, double y, StudentWorld * world)
-	:Activating(imageID, x, y, world, right, 1)
+//
+//	Vomit
+//
+
+Vomit::Vomit(double x, double y, StudentWorld * world, int dir)
+	:Projectile(IID_VOMIT, x, y, world, dir)
 {
 }
 
-void Goodie::tryActivate(Actor * a)
+void Vomit::tryActivate(Actor * a)
 {
-	if (playerOverlaps())
-	{
-		kill();
-	}
-}
-
-void Goodie::dyingAction()
-{
-	getWorld()->increaseScore(50);
-	getWorld()->playSound(SOUND_GOT_GOODIE);
-	incContains();
+	if (a->infectable())
+		a->infect();
 }
 
 //
