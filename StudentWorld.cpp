@@ -110,11 +110,11 @@ int StudentWorld::init()
 	return GWSTATUS_LEVEL_ERROR;
 }
 
-int StudentWorld::move()	// TODO: COMPLETE
+int StudentWorld::move()
 {
-	m_player->doSomething();		// Player takes its turn
 	if (!(m_player->alive()))
 		return GWSTATUS_PLAYER_DIED;
+	m_player->doSomething();		// Player takes its turn
 
 	list<Actor*>::iterator it = m_actors.begin();
 	while (it != m_actors.end())
@@ -175,6 +175,36 @@ void StudentWorld::cleanUp()
 	m_actors.clear();		// Prevents undefined behavior in repeated calls of cleanUp()
 }
 
+double StudentWorld::playerX() const
+{
+	return m_player->getX();
+}
+
+double StudentWorld::playerY() const
+{
+	return m_player->getY();
+}
+
+void StudentWorld::playerFinish()
+{
+	m_player->finishLevel();
+}
+
+void StudentWorld::addFlames()
+{
+	m_player->incFlames();
+}
+
+void StudentWorld::addVacs()
+{
+	m_player->incVacs();
+}
+
+void StudentWorld::addMines()
+{
+	m_player->incMines();
+}
+
 void StudentWorld::overlap(double x, double y, list<Actor*> & trues, const Actor * compare)
 {
 	list<Actor*>::iterator it = m_actors.begin();
@@ -189,24 +219,139 @@ void StudentWorld::overlap(double x, double y, list<Actor*> & trues, const Actor
 
 bool StudentWorld::overlapsPlayer(double x, double y, const Actor * compare)
 {
-	return m_player->inBoundary(x, y, compare);
+	return m_player->overlapping(x, y, compare);
 }
 
-void StudentWorld::blocked(double x, double y, list<Actor*> & trues, const Actor * moving)
+bool StudentWorld::blocked(double x, double y, const Actor * moving)
 {
 	list<Actor*>::iterator it = m_actors.begin();
 	while (it != m_actors.end())	// Check every Actor in the game right now
 	{
 		if ((*it)->impassable())			// The Actor is impassable
 			if ((*it)->inBoundary(x, y, moving))	// The point is in the Actor's boundary box
-				trues.push_back(*it);	// Add the Actor to a list of objects blocking
+				return true;
 		it++;
 	}
 
 	if (m_player->inBoundary(x, y, moving))	// Check the player
-		trues.push_back(m_player);
+		return true;
 
-	return;
+	return false;
+}
+
+int StudentWorld::bestDirToTarget(Actor* searching)
+{
+	Actor* closest = nullptr;
+	double closestDist = distToCitizen(searching->getX(), searching->getY(), closest);
+	if (distToPlayer(searching->getX(), searching->getY()) <= closestDist)
+	{
+		closestDist = distToPlayer(searching->getX(), searching->getY());
+		closest = m_player;
+	}
+
+	if (closestDist > 80)	// If the closest Human is too far, pick a random direction
+		return randDir();
+
+	if (searching->getX() == closest->getX())			// SmartZombie is in the same column as target
+	{
+		if (searching->getY() < closest->getY())		// Directly below target
+			return GraphObject::up;
+		else if (searching->getY() > closest->getY())	// Directly above target
+			return GraphObject::down;
+	}
+	else if (searching->getY() == closest->getY())	// SmartZombie is in the same row as target
+	{
+		if (searching->getX() < closest->getX())		// Directly to the left of target
+			return GraphObject::right;
+		else if (searching->getX() > closest->getX())	// Directly to the right of target
+			return GraphObject::left;
+	}
+
+	int horz, vert;	// Determines the two best directions to move to get to the target
+	if (searching->getY() < closest->getY())		// Below target
+		vert = GraphObject::up;
+	else if (searching->getY() > closest->getY())	// Above target
+		vert = GraphObject::down;
+
+	if (searching->getX() < closest->getX())		// To the left of target
+		horz = GraphObject::right;
+	else if (searching->getX() > closest->getX())	// To the right of target
+		horz = GraphObject::left;
+
+	if (randInt(0, 1))	// Randomly pick a direction
+		return vert;
+	else
+		return horz;
+}
+
+bool StudentWorld::isOverlapped(double x, double y, const Actor * compare)
+{
+	list<Actor*> overlaps;
+	overlap(x, y, overlaps, compare);
+	if (overlaps.empty())
+		return false;
+	else
+		return true;
+}
+
+bool StudentWorld::foundTarget(double x, double y, const Actor * a)
+{
+	list<Actor*> potentials;
+	overlap(x, y, potentials, a);
+	list<Actor*>::iterator it = potentials.begin();
+	while (it != potentials.end())
+	{
+		if ((*it)->infectable())
+			return true;
+
+		it++;
+	}
+	return false;
+}
+
+bool StudentWorld::flameBlocked(double x, double y, const Actor * a)
+{
+	list<Actor*> overlaps;
+	overlap(x, y, overlaps, a);
+	list<Actor*>::iterator it = overlaps.begin();
+	while (it != overlaps.end())	// Check if the Flame would be overlapping something that blocks it
+	{
+		if ((*it)->blocksFire())
+			return true;
+		it++;
+	}
+	return false;
+}
+
+void StudentWorld::activateOnOverlaps(Activating * checking)
+{
+	list<Actor*> overlaps;
+	overlap(checking->getX(), checking->getY(), overlaps, checking);
+	list<Actor*>::iterator it = overlaps.begin();
+	while (it != overlaps.end())
+	{
+		checking->tryActivate(*it);
+		it++;
+	}
+
+	if (overlapsPlayer(checking->getX(), checking->getY(), checking))
+		checking->tryActivate(m_player);
+}
+
+int StudentWorld::randDir()
+{
+	switch (randInt(1, 4))
+	{
+	case 1:
+		return GraphObject::right;
+	case 2:
+		return GraphObject::left;
+	case 3:
+		return GraphObject::up;
+	case 4:
+	default:	// Only so all control paths return a value
+		return GraphObject::down;
+	}
 }
 
 double StudentWorld::distToZombie(double x, double y)

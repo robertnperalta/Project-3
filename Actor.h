@@ -46,6 +46,7 @@ public:
 	virtual bool blocksVomit() const { return false; }
 	virtual bool dieFromHazard() const { return false; }
 	virtual bool infectable() const { return false; }
+	virtual bool savesCitizens() const { return false; }
 	virtual bool eatsBrains() const { return false; }
 	virtual bool burns() const { return false; }
 
@@ -68,19 +69,11 @@ public:
 	virtual void something() {}
 	virtual void tryActivate(Actor* a) = 0;
 
-	// Accessors
-
-	std::list<Actor*>::iterator overlapsBegin() { return m_overlaps.begin(); }
-	std::list<Actor*>::iterator overlapsEnd() { return m_overlaps.end(); }
-	bool playerOverlaps() const { return m_playerOverlaps; }
-
 	// Mutators
 
 	void stop() { m_stop = true; }
 
 private:
-	std::list<Actor*> m_overlaps;
-	bool m_playerOverlaps;
 	bool m_stop;
 };
 
@@ -198,11 +191,13 @@ public:
 	virtual ~Goodie() {}
 
 	virtual void tryActivate(Actor* a);
-	virtual void incContains() = 0;
 
 	// Characteristics
 
 	virtual bool dieFromHazard() const { return true; }
+
+private:
+	virtual void incContains() = 0;
 };
 
 //////////////////////////////
@@ -235,6 +230,10 @@ public:
 	void incVacs() { m_nVacs++; }
 	void incFlames() { m_nFlames += 5; }
 	void incMines() { m_nMines += 2; }
+
+	// Characteristics
+
+	virtual bool savesCitizens() const { return true; }
 
 private:
 	void makeFlameLine();
@@ -403,7 +402,8 @@ public:
 	VaccineGoodie(double x, double y, StudentWorld* world);
 	virtual ~VaccineGoodie() {}
 
-	virtual void incContains() { getWorld()->player()->incVacs(); }
+private:
+	virtual void incContains() { getWorld()->addVacs(); }
 };
 
 //
@@ -416,7 +416,8 @@ public:
 	GasCanGoodie(double x, double y, StudentWorld* world);
 	virtual ~GasCanGoodie() {}
 
-	virtual void incContains() { getWorld()->player()->incFlames(); }
+private:
+	virtual void incContains() { getWorld()->addFlames(); }
 };
 
 //
@@ -429,7 +430,8 @@ public:
 	LandmineGoodie(double x, double y, StudentWorld* world);
 	virtual ~LandmineGoodie() {}
 
-	virtual void incContains() { getWorld()->player()->incMines(); }
+private:
+	virtual void incContains() { getWorld()->addMines(); }
 };
 
 #endif // ACTOR_H_

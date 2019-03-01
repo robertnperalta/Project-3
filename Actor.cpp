@@ -2,24 +2,6 @@
 #include <list>
 using namespace std;
 
-// Auxiliary functions
-
-int randDir()
-{
-	switch (randInt(1, 4))
-	{
-	case 1:
-		return GraphObject::right;
-	case 2:
-		return GraphObject::left;
-	case 3:
-		return GraphObject::up;
-	case 4:
-	default:	// Only so all control paths return a value
-		return GraphObject::down;
-	}
-}
-
 //////////////////////////////
 //		BASE CLASSES		//
 //////////////////////////////
@@ -66,7 +48,7 @@ bool Actor::overlapping(double x, double y, const Actor * compare) const
 //
 
 Activating::Activating(int imageID, double x, double y, StudentWorld * world, int dir, int depth)
-	:Actor(imageID, x, y, world, dir, depth), m_playerOverlaps(false), m_stop(false)
+	:Actor(imageID, x, y, world, dir, depth), m_stop(false)
 {
 }
 
@@ -80,20 +62,7 @@ void Activating::doSomething()
 		return;
 	}
 
-	getWorld()->overlap(getX(), getY(), m_overlaps, this);
-	m_playerOverlaps = getWorld()->overlapsPlayer(getX(), getY(), this);
-
-	list<Actor*>::iterator it = overlapsBegin();
-	while (it != overlapsEnd())
-	{
-		tryActivate(*it);				// Try to activate on all overlapping Actors
-		it++;
-	}
-	if (playerOverlaps())				// Try to activate on the Player, if it's overlapping
-		tryActivate(getWorld()->player());
-
-	m_overlaps.clear();
-	m_playerOverlaps = false;
+	getWorld()->activateOnOverlaps(this);	// Check for overlaps and call tryActivate() on them
 }
 
 //
@@ -155,9 +124,7 @@ bool Agent::tryMove(int dir)
 	double destX, destY;
 	findDest(dir, m_moveDist, m_moveDist, destX, destY);	// Determine the Actor's destination
 
-	list<Actor*> blocking;
-	getWorld()->blocked(destX, destY, blocking, this);
-	if (blocking.size() != 0)	// The destination is blocked
+	if (getWorld()->blocked(destX, destY, this))	// The destination is blocked
 		return false;
 	else
 	{
@@ -206,24 +173,8 @@ void Zombie::something()
 
 	double vomitX, vomitY;
 	findDest(getDirection(), SPRITE_WIDTH, SPRITE_HEIGHT, vomitX, vomitY);	// Find where the vomit would be
-	list<Actor*> overlapsVomit;
-	getWorld()->overlap(vomitX, vomitY, overlapsVomit, this);	// Get a list of Actors that would be hit by the Vomit
-	if (getWorld()->overlapsPlayer(vomitX, vomitY, this))	// If Player would be hit, add it to the list
-		overlapsVomit.push_back(getWorld()->player());
 
-	bool foundTarget = false;
-	list<Actor*>::iterator it = overlapsVomit.begin();
-	while (it != overlapsVomit.end())	// See if any Actors would overlap with the vomit
-	{
-		if ((*it)->infectable())
-		{
-			foundTarget = true;
-			break;
-		}
-		it++;
-	}
-
-	if (foundTarget && randInt(1, 3) == 1)	// There is a target and it passes the 1 in 3 chance
+	if (getWorld()->foundTarget(vomitX, vomitY, this) && randInt(1, 3) == 1)	// There is a target and it passes the 1 in 3 chance
 	{
 		getWorld()->addActor(new Vomit(vomitX, vomitY, getWorld(), getDirection()));
 		return;
@@ -256,7 +207,7 @@ Goodie::Goodie(int imageID, double x, double y, StudentWorld * world)
 
 void Goodie::tryActivate(Actor * a)
 {
-	if (playerOverlaps())
+	if (getWorld()->overlapsPlayer(getX(), getY(), this))
 	{
 		setToRemove();
 		getWorld()->increaseScore(50);
@@ -333,7 +284,7 @@ void Player::makeFlameLine()
 	for (int k = 0; k < 3; k++)	// For each Flame in the line
 	{
 		double destX, destY;
-		switch (getDirection())					// Find where it would be allocated
+		switch (getDirection())	// Find where it would be allocated
 		{
 		case GraphObject::left:
 			destX = getX() - SPRITE_WIDTH * (k + 1);
@@ -353,20 +304,7 @@ void Player::makeFlameLine()
 			break;
 		}
 
-		list<Actor*> overlaps;
-		getWorld()->overlap(destX, destY, overlaps, nullptr);
-		list<Actor*>::iterator it = overlaps.begin();
-		bool doubleBreak = false;
-		while (it != overlaps.end())	// Check if the Flame would be overlapping something that blocks it
-		{
-			if ((*it)->blocksFire())
-			{
-				doubleBreak = true;
-				break;
-			}
-			it++;
-		}
-		if (doubleBreak)
+		if (getWorld()->flameBlocked(destX, destY, nullptr))	// If the Flame would be blocked, stop creating Flames
 			break;
 		else
 			getWorld()->addActor(new Flame(destX, destY, getWorld(), getDirection()));	// Allocate the Flame if nothing is blocking it
@@ -418,21 +356,21 @@ void Citizen::something()
 		closestPlayer <= 80)						// Player is 80 pixels away or closer
 	{
 		bool blocked = false;
-		if (getX() == getWorld()->player()->getX())			// Citizen is in the same column as Player
+		if (getX() == getWorld()->playerX())			// Citizen is in the same column as Player
 		{
-			if (getY() < getWorld()->player()->getY())		// Directly below Player
+			if (getY() < getWorld()->playerY())		// Directly below Player
 				blocked = tryMove(up);
-			else if (getY() > getWorld()->player()->getY())	// Directly above Player
+			else if (getY() > getWorld()->playerY())	// Directly above Player
 				blocked = tryMove(down);
 
 			if (!blocked)	// The Citizen successfully moved
 				return;
 		}
-		else if (getY() == getWorld()->player()->getY())	// Citizen is in the same row as Player
+		else if (getY() == getWorld()->playerY())	// Citizen is in the same row as Player
 		{
-			if (getX() < getWorld()->player()->getX())		// Directly to the left of Player
+			if (getX() < getWorld()->playerX())		// Directly to the left of Player
 				blocked = tryMove(right);
-			else if (getX() > getWorld()->player()->getX())	// Directly to the right of Player
+			else if (getX() > getWorld()->playerX())	// Directly to the right of Player
 				blocked = tryMove(left);
 
 			if (!blocked)	// The Citizen successfully moved
@@ -443,14 +381,14 @@ void Citizen::something()
 		{
 			int horz, vert;	// Determines the two best directions to move to get to the player
 
-			if (getY() < getWorld()->player()->getY())		// Below Player
+			if (getY() < getWorld()->playerY())		// Below Player
 				vert = up;
-			else if (getY() > getWorld()->player()->getY())	// Above Player
+			else if (getY() > getWorld()->playerY())	// Above Player
 				vert = down;
 
-			if (getX() < getWorld()->player()->getX())		// To the left of Player
+			if (getX() < getWorld()->playerX())		// To the left of Player
 				horz = right;
-			else if (getX() > getWorld()->player()->getX())	// To the right of Player
+			else if (getX() > getWorld()->playerX())	// To the right of Player
 				horz = left;
 
 			int dir;
@@ -483,9 +421,7 @@ void Citizen::something()
 			double destX, destY;
 			findDest(*it, moveDist(), moveDist(), destX, destY);
 
-			list<Actor*> blocking;
-			getWorld()->blocked(destX, destY, blocking, this);
-			if (blocking.empty())	// If the motion isn't blocked
+			if (!getWorld()->blocked(destX, destY, this))	// If the motion isn't blocked
 			{
 				double aCloseZombie = getWorld()->distToZombie(destX, destY);
 				if ( aCloseZombie > bestDist)	// If moving in that direction will put the Citizen farther from the closest Zombie
@@ -526,7 +462,6 @@ void Citizen::whenInfected()
 
 void Citizen::dyingAction()
 {
-	setToRemove();
 	getWorld()->decCitizens();
 	getWorld()->playSound(SOUND_CITIZEN_DIE);
 	getWorld()->increaseScore(-1000);
@@ -545,22 +480,21 @@ void DumbZombie::dyingAction()
 {
 	getWorld()->playSound(SOUND_ZOMBIE_DIE);
 	getWorld()->increaseScore(1000);
-	if (randInt(1, 10) == 1)
+	if (randInt(1, 10) == 1)	// With a 1 in 10 chance
 	{
 		double destX, destY;
-		findDest(randDir(), SPRITE_WIDTH, SPRITE_HEIGHT, destX, destY);
-		list<Actor*> overlaps;
-		getWorld()->overlap(destX, destY, overlaps, this);
-		if (overlaps.empty() && !getWorld()->overlapsPlayer(destX, destY, this))
+		findDest(getWorld()->randDir(), SPRITE_WIDTH, SPRITE_HEIGHT, destX, destY);
+
+		if (getWorld()->isOverlapped(destX, destY, this))	// If the VaccineGoodie wouldn't be overlapping something
 		{
-			getWorld()->addActor(new VaccineGoodie(destX, destY, getWorld()));
+			getWorld()->addActor(new VaccineGoodie(destX, destY, getWorld()));	// Allocate a new VaccineGoodie
 		}
 	}
 }
 
 int DumbZombie::pickDirection()
 {
-	return randDir();
+	return getWorld()->randDir();
 }
 
 //
@@ -574,47 +508,7 @@ SmartZombie::SmartZombie(double x, double y, StudentWorld * world)
 
 int SmartZombie::pickDirection()
 {
-	Actor* closest = nullptr;
-	double closestDist = getWorld()->distToCitizen(getX(), getY(), closest);
-	if (getWorld()->distToPlayer(getX(), getY()) <= closestDist)
-	{
-		closestDist = getWorld()->distToPlayer(getX(), getY());
-		closest = getWorld()->player();
-	}
-
-	if (closestDist > 80)	// If the closest Human is too far, pick a random direction
-		return randDir();
-
-	if (getX() == closest->getX())			// SmartZombie is in the same column as target
-	{
-		if (getY() < closest->getY())		// Directly below target
-			return up;
-		else if (getY() > closest->getY())	// Directly above target
-			return down;
-	}
-	else if (getY() == closest->getY())	// SmartZombie is in the same row as target
-	{
-		if (getX() < closest->getX())		// Directly to the left of target
-			return right;
-		else if (getX() > closest->getX())	// Directly to the right of target
-			return left;
-	}
-
-	int horz, vert;	// Determines the two best directions to move to get to the target
-	if (getY() < closest->getY())		// Below target
-		vert = up;
-	else if (getY() > closest->getY())	// Above target
-		vert = down;
-
-	if (getX() < closest->getX())		// To the left of target
-		horz = right;
-	else if (getX() > closest->getX())	// To the right of target
-		horz = left;
-
-	if (randInt(0, 1))	// Randomly pick a direction
-		return vert;
-	else
-		return horz;
+	return getWorld()->bestDirToTarget(this);
 }
 
 //
@@ -637,11 +531,11 @@ Exit::Exit(double x, double y, StudentWorld * world)
 
 void Exit::tryActivate(Actor * a)
 {
-	if (a == getWorld()->player())					// Player is on the exit and there are no more Citizens
+	if (a->savesCitizens())					// Player is on the exit and there are no more Citizens
 	{
 		if (getWorld()->nCitizens() == 0)
 		{
-			getWorld()->player()->finishLevel();	// End the level
+			getWorld()->playerFinish();	// End the level
 			return;
 		}
 	}
